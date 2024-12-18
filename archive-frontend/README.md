@@ -31,3 +31,7 @@ npm run dev
 ```sh
 npm run build
 ```
+
+## Dockerize for Reclaim Cloud
+docker build -t archive-frontend . --platform linux/amd64
+

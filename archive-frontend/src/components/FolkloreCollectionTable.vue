@@ -11,7 +11,9 @@
           <th>Contributor Age</th>
           <th>Contributor Gender</th>
           <th>Folklore Item</th>
-          <th>Genre</th>
+          <td @click="fetchCollections('')" class="clickable">
+            Genre
+          </td>
           <th>Collector Name</th>
           <th>Date Collected</th>
           <th>Location Collected</th>
@@ -24,7 +26,10 @@
           <td>{{ collection.contributor.age_bucket }}</td>
           <td>{{ collection.contributor.gender || 'N/A' }}</td>
           <td>{{ collection.folklore.item }}</td>
-          <td>{{ collection.folklore.genre }}</td>
+          <!-- Add click handler for genres -->
+          <td @click="fetchCollections(collection.folklore.genre)" class="clickable">
+            {{ collection.folklore.genre }}
+          </td>
           <td>{{ collection.collector.name }}</td>
           <td>{{ formatDate(collection.date_collected) }}</td>
           <td>{{ formatLocation(collection.location_collected) }}</td>
@@ -40,7 +45,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted } from "vue";
-import { FolkloreCollection } from "../types";
+import type { FolkloreCollection } from "../types";
 
 export default defineComponent({
   name: "FolkloreCollectionTable",
@@ -48,9 +53,13 @@ export default defineComponent({
     const collections = ref<FolkloreCollection[]>([]);
     const error = ref<string | null>(null);
 
-    const fetchCollections = async () => {
+    // Fetch collections, with optional genre filtering
+    const fetchCollections = async (genre: string = "") => {
       try {
-        const response = await fetch("/api/folklore/"); // Replace with your API endpoint
+        let path = genre
+          ? `/api/folklore/genre/${genre}`
+          : "/api/folklore/";
+        const response = await fetch(path); // Replace with your API endpoint
         if (!response.ok) {
           throw new Error("Failed to fetch data");
         }
@@ -61,14 +70,17 @@ export default defineComponent({
       }
     };
 
+    // Format the date
     const formatDate = (date: string): string => {
       return new Date(date).toLocaleDateString();
     };
 
+    // Format the location
     const formatLocation = (location: FolkloreCollection["location_collected"]): string => {
       return [location.city, location.state, location.country].filter(Boolean).join(", ");
     };
 
+    // Load initial data on mount
     onMounted(() => {
       fetchCollections();
     });
@@ -76,6 +88,7 @@ export default defineComponent({
     return {
       collections,
       error,
+      fetchCollections, // Explicitly return fetchCollections so it's available in the template
       formatDate,
       formatLocation,
     };
@@ -87,5 +100,11 @@ export default defineComponent({
 .error {
   color: red;
   font-weight: bold;
+}
+
+.clickable {
+  cursor: pointer;
+  color: blue;
+  text-decoration: underline;
 }
 </style>
