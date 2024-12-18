@@ -57,8 +57,8 @@ export default defineComponent({
     const fetchCollections = async (genre: string = "") => {
       try {
         let path = genre
-          ? `/api/folklore/genre/${genre}`
-          : "/api/folklore/";
+          ? `${import.meta.env.VITE_BACKEND_API}${genre}`
+          : `${import.meta.env.VITE_BACKEND_API}`;
         const response = await fetch(path); // Replace with your API endpoint
         if (!response.ok) {
           throw new Error("Failed to fetch data");
