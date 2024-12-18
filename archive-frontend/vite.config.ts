@@ -20,7 +20,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "https://env-2986297.us.reclaim.cloud", // Your backend URL
+        target: "https://env-2986297.us.reclaim.cloud", // backend API URL
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },

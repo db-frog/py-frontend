@@ -57,7 +57,7 @@ export default defineComponent({
     const fetchCollections = async (genre: string = "") => {
       try {
         let path = genre
-          ? `${import.meta.env.VITE_BACKEND_API}${genre}`
+          ? `${import.meta.env.VITE_BACKEND_API}/genre/${genre}`
           : `${import.meta.env.VITE_BACKEND_API}`;
         const response = await fetch(path); // Replace with your API endpoint
         if (!response.ok) {
