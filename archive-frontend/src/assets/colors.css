@@ -1,0 +1,13 @@
+:root {
+  /* Primary Palette */
+  --color-primary-blue: #002676;
+  --color-primary-yellow: #FDB515;
+  --color-primary-white: #FFFFFF;
+
+  /* Secondary Palette */
+  --color-secondary-darknavy: #010133;
+  --color-secondary-orange: #FC9313;
+  --color-secondary-green: #00553A;
+  --color-secondary-magenta: #770747;
+  --color-secondary-purple: #431170;
+}

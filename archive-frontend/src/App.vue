@@ -1,38 +1,25 @@
-<script setup lang="ts">
-import FolkloreCollectionTable from './components/FolkloreCollectionTable.vue'
-</script>
-
+<!-- src/App.vue -->
 <template>
-  <main>
-    <FolkloreCollectionTable />
-  </main>
+  <FolklorePage />
 </template>
 
-<style scoped>
-header {
-  line-height: 1.5;
-}
+<script lang="ts">
+import { defineComponent } from "vue";
+import FolklorePage from "@/views/FolklorePage.vue";
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
+export default defineComponent({
+  name: "App",
+  components: {
+    FolklorePage,
+  },
+});
+</script>
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
+<style>
+/* Optional global styles */
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
 }
 </style>
