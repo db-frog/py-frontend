@@ -96,7 +96,7 @@ export default defineComponent({
 
     // Modal state
     const showModal = ref(false);
-    const selectedRow = ref(null);
+    const selectedRow = ref(undefined);
 
     function openModal(row: any) {
       selectedRow.value = row;
@@ -104,7 +104,7 @@ export default defineComponent({
     }
     function closeModal() {
       showModal.value = false;
-      selectedRow.value = null;
+      selectedRow.value = undefined;
     }
 
     // Pagination with page numbers / ellipses
