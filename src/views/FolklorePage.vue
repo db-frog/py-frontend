@@ -24,6 +24,45 @@
           </li>
         </ul>
       </div>
+      <div class="filter-section">
+        <h3>Pagination</h3>
+        <label>
+              Maximum items
+              <input
+                type="number"
+                min="1"
+                v-model="paginationState.userRequestedMaximumItems"
+                :max="collections.length"
+                style="width: 3rem;"
+              />
+        </label>
+        <br>
+        <label>
+              Items per page
+              <input
+                type="number"
+                min="1"
+                v-model="paginationState.itemsPerPage"
+                style="width: 3rem;"
+              />
+        </label>
+        <br>
+        <label>
+              Current page
+              <input
+                type="number"
+                min="1"
+                :max="totalPages"
+                v-model="displayCurrentPage"
+                style="width: 3rem;"
+              />
+        </label>
+        <button @click="resetUserPagination">Reset</button>
+      </div>
+      <div class="filter-section">
+        <h3>Random Item</h3>
+        <button @click="handleFetchRandom">Generate</button>
+      </div>
     </aside>
 
     <!-- Main Content -->
@@ -49,7 +88,7 @@
           <span
             v-else
             class="page-number"
-            :class="{ active: currentPage + 1 === page }"
+            :class="{ active: paginationState.currentPage + 1 === page }"
             @click="goToPageIndex(page)"
           >
             {{ page }}
@@ -83,11 +122,12 @@ export default defineComponent({
       collections,
       fields,
       selectedFilters,
+      paginationState,
       uniqueOptions,
-      currentPage,
       totalPages,
       paginatedCollections,
       fetchCollections,
+      fetchRandom,
       goToPage,
     } = useFolkloreCollections();
 
@@ -107,10 +147,27 @@ export default defineComponent({
       selectedRow.value = undefined;
     }
 
+    async function handleFetchRandom() {
+      isLoading.value = true;
+      await fetchRandom();
+      isLoading.value = false;
+    }
+
+    function resetUserPagination() {
+      paginationState.value.userRequestedMaximumItems = collections.value.length;
+      paginationState.value.itemsPerPage = 20;
+      paginationState.value.currentPage = 0;
+    }
+
+    const displayCurrentPage = computed({
+      get: () => paginationState.value.currentPage + 1,
+      set: (page: number) => goToPageIndex(page),
+    });
+
     // Pagination with page numbers / ellipses
     const displayPages = computed(() => {
       const total = totalPages.value;
-      const current = currentPage.value + 1;
+      const current = paginationState.value.currentPage + 1;
       const pages: (number | string)[] = [];
 
       if (total <= 5) {
@@ -150,8 +207,8 @@ export default defineComponent({
       collections,
       fields,
       selectedFilters,
+      paginationState,
       uniqueOptions,
-      currentPage,
       totalPages,
       paginatedCollections,
       fetchCollections,
@@ -159,6 +216,9 @@ export default defineComponent({
       displayPages,
       goToPageIndex,
       isLoading,
+      resetUserPagination,
+      handleFetchRandom,
+      displayCurrentPage,
 
       // modal
       showModal,
@@ -227,6 +287,15 @@ export default defineComponent({
 .filter-section ul {
   list-style-type: none;
 }
+.filter-section button {
+  background-color: var(--color-primary-blue);
+  color: var(--color-primary-white);
+  display: block;
+}
+.filter-section button:hover {
+  background-color: var(--color-secondary-darknavy);
+  cursor: pointer;
+}
 
 /*
    The remainder of horizontal space after the sidebar.
@@ -249,6 +318,7 @@ export default defineComponent({
   border-radius: 4px;
   margin-bottom: 1rem;
   background-color: var(--color-primary-white);
+  color: var(--color-secondary-darknavy);
 }
 
 /*

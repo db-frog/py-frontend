@@ -28,9 +28,12 @@ export function useFolkloreCollections() {
           language_of_origin: [],
           // add other filterable fields here as needed
         });
-
-  const currentPage = ref(0);
-  const itemsPerPage = ref(20);
+  
+  const paginationState = ref<Record<string, number>>({
+    userRequestedMaximumItems: 0,
+    itemsPerPage: 20,
+    currentPage: 0
+  });
 
   // Define the fields we want to display/filter
   const fields: FieldDefinition[] = [
@@ -88,11 +91,24 @@ export function useFolkloreCollections() {
   // -----------------------------------
   async function fetchCollections() {
     try {
-      let path = "/api/folklore/";
+      let path = `${import.meta.env.VITE_BACKEND_API}/folklore/`;
       const response = await fetch(path);
       if (!response.ok) throw new Error("Failed to fetch data");
       collections.value = await response.json();
-      currentPage.value = 0; // reset to first page
+      paginationState.value.currentPage = 0; // reset to first page
+      paginationState.value.userRequestedMaximumItems = collections.value.length;
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function fetchRandom() {
+    try {
+      let path = `${import.meta.env.VITE_BACKEND_API}/folklore/random`;
+      const response = await fetch(path);
+      if (!response.ok) throw new Error("Failed to fetch data");
+      collections.value = await response.json();
+      paginationState.value.currentPage = 0; // reset to first page
     } catch (err) {
       console.error(err);
     }
@@ -155,14 +171,15 @@ export function useFolkloreCollections() {
 
   // 3) Paginated result
   const paginatedCollections = computed(() => {
-    const startIndex = currentPage.value * itemsPerPage.value;
-    const endIndex = startIndex + itemsPerPage.value;
-    return filteredCollections.value.slice(startIndex, endIndex);
+    const startIndex = paginationState.value.currentPage * paginationState.value.itemsPerPage;
+    const endIndex = startIndex + paginationState.value.itemsPerPage;
+    return filteredCollections.value.slice(0, paginationState.value.userRequestedMaximumItems).slice(startIndex, endIndex);
   });
 
   // 4) Total pages
   const totalPages = computed(() => {
-    return Math.ceil(filteredCollections.value.length / itemsPerPage.value);
+    const entriesLength = Math.min(filteredCollections.value.length, paginationState.value.userRequestedMaximumItems);
+    return Math.ceil(entriesLength / paginationState.value.itemsPerPage);
   });
 
   // -----------------------------------
@@ -174,14 +191,14 @@ export function useFolkloreCollections() {
   }
 
   function goToPage(pageIndex: number) {
-    currentPage.value = pageIndex;
+    paginationState.value.currentPage = pageIndex;
   }
 
   // Reset page when filters change
   watch(
     selectedFilters,
     () => {
-      currentPage.value = 0;
+      paginationState.value.currentPage = 0;
     },
     { deep: true }
   );
@@ -194,9 +211,8 @@ export function useFolkloreCollections() {
     collections,
     fields,
     selectedFilters,
+    paginationState,
     uniqueOptions,
-    currentPage,
-    itemsPerPage,
 
     // Computed
     filteredCollections,
@@ -205,6 +221,7 @@ export function useFolkloreCollections() {
 
     // Methods
     fetchCollections,
+    fetchRandom,
     goToPage,
     getNestedValue,
   };
