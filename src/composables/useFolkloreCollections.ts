@@ -20,6 +20,8 @@ export function useFolkloreCollections() {
   // Reactive State
   // -----------------------------------
   const collections = ref<FolkloreCollection[]>([]);
+  const randomCollections = ref<FolkloreCollection[]>([]);
+  var collectionMode = ref<boolean>(true); // False for random collection
 
   // We'll store filters in an object: { fieldKey: string[] }
   // E.g.: { genre: ['Legend', 'Myth'], language_of_origin: ['Spanish'] }
@@ -97,21 +99,20 @@ export function useFolkloreCollections() {
       collections.value = await response.json();
       paginationState.value.currentPage = 0; // reset to first page
       paginationState.value.userRequestedMaximumItems = collections.value.length;
+      collectionMode.value = true;
     } catch (err) {
       console.error(err);
     }
   }
 
-  async function fetchRandom() {
-    try {
-      let path = `${import.meta.env.VITE_BACKEND_API}/folklore/random`;
-      const response = await fetch(path);
-      if (!response.ok) throw new Error("Failed to fetch data");
-      collections.value = await response.json();
-      paginationState.value.currentPage = 0; // reset to first page
-    } catch (err) {
-      console.error(err);
+  function fetchRandom() {
+    if (filteredCollections.value.length === 0) {
+      return;
     }
+    const randomItem = filteredCollections.value[Math.floor(Math.random() * filteredCollections.value.length)];
+    randomCollections.value = [randomItem];
+    paginationState.value.currentPage = 0; // reset to first page
+    collectionMode.value = false;
   }
 
   // -----------------------------------
@@ -130,7 +131,8 @@ export function useFolkloreCollections() {
       });
 
     // Populate sets by reading the path on each collection
-    collections.value.forEach((col) => {
+    const relevant_collections = collectionMode.value ? collections.value : randomCollections.value;
+    relevant_collections.forEach((col) => {
       fields
         .filter((f) => f.filterable)
         .forEach((f) => {
@@ -152,7 +154,8 @@ export function useFolkloreCollections() {
   // 2) Apply filters: For each field, if selectedFilters[field].length > 0,
   //    we only keep items matching that field's value.
   const filteredCollections = computed(() => {
-    return collections.value.filter((col) => {
+    const relevant_collections = collectionMode.value ? collections.value : randomCollections.value;
+    return relevant_collections.filter((col) => {
       let matchesAll = true;
       // Check each filterable field's selections
       for (const f of fields.filter((x) => x.filterable)) {
@@ -209,6 +212,8 @@ export function useFolkloreCollections() {
   return {
     // Data
     collections,
+    randomCollections,
+    collectionMode,
     fields,
     selectedFilters,
     paginationState,

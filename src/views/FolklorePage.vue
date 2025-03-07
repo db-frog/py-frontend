@@ -62,6 +62,7 @@
       <div class="filter-section">
         <h3>Random Item</h3>
         <button @click="handleFetchRandom">Generate</button>
+        <button @click="undoRandom">Show all</button>
       </div>
     </aside>
 
@@ -120,6 +121,7 @@ export default defineComponent({
   setup() {
     const {
       collections,
+      collectionMode,
       fields,
       selectedFilters,
       paginationState,
@@ -149,7 +151,7 @@ export default defineComponent({
 
     async function handleFetchRandom() {
       isLoading.value = true;
-      await fetchRandom();
+      fetchRandom();
       isLoading.value = false;
     }
 
@@ -157,6 +159,12 @@ export default defineComponent({
       paginationState.value.userRequestedMaximumItems = collections.value.length;
       paginationState.value.itemsPerPage = 20;
       paginationState.value.currentPage = 0;
+    }
+
+    function undoRandom() {
+      isLoading.value = true;
+      collectionMode.value = true;
+      isLoading.value = false;
     }
 
     const displayCurrentPage = computed({
@@ -205,6 +213,7 @@ export default defineComponent({
 
     return {
       collections,
+      collectionMode,
       fields,
       selectedFilters,
       paginationState,
@@ -219,6 +228,7 @@ export default defineComponent({
       resetUserPagination,
       handleFetchRandom,
       displayCurrentPage,
+      undoRandom,
 
       // modal
       showModal,
@@ -291,6 +301,7 @@ export default defineComponent({
   background-color: var(--color-primary-blue);
   color: var(--color-primary-white);
   display: block;
+  margin-top: 0.5rem;
 }
 .filter-section button:hover {
   background-color: var(--color-secondary-darknavy);
