@@ -42,6 +42,7 @@
               <input
                 type="number"
                 min="1"
+                max="20"
                 v-model="paginationState.itemsPerPage"
                 style="width: 3rem;"
               />
@@ -121,7 +122,7 @@ export default defineComponent({
   setup() {
     const {
       collections,
-      collectionMode,
+      isNormalMode,
       fields,
       selectedFilters,
       paginationState,
@@ -129,6 +130,7 @@ export default defineComponent({
       totalPages,
       paginatedCollections,
       fetchCollections,
+      fetchInitialCollections,
       fetchRandom,
       goToPage,
     } = useFolkloreCollections();
@@ -163,7 +165,7 @@ export default defineComponent({
 
     function undoRandom() {
       isLoading.value = true;
-      collectionMode.value = true;
+      isNormalMode.value = true;
       isLoading.value = false;
     }
 
@@ -197,7 +199,9 @@ export default defineComponent({
 
     function goToPageIndex(page: number | string) {
       if (typeof page === "number") {
+        isLoading.value = true;
         goToPage(page - 1);
+        isLoading.value = false;
       }
     }
 
@@ -205,7 +209,7 @@ export default defineComponent({
     onMounted(async () => {
       try {
         isLoading.value = true;
-        await fetchCollections(); // fetch data
+        await fetchInitialCollections(); // fetch data
       } finally {
         isLoading.value = false;
       }
@@ -213,7 +217,7 @@ export default defineComponent({
 
     return {
       collections,
-      collectionMode,
+      isNormalMode,
       fields,
       selectedFilters,
       paginationState,

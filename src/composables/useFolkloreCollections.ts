@@ -21,7 +21,8 @@ export function useFolkloreCollections() {
   // -----------------------------------
   const collections = ref<FolkloreCollection[]>([]);
   const randomCollections = ref<FolkloreCollection[]>([]);
-  var collectionMode = ref<boolean>(true); // False for random collection
+  const isNormalMode = ref<boolean>(true); // False for random collection
+  const isAllDataFetched = ref<boolean>(false);
 
   // We'll store filters in an object: { fieldKey: string[] }
   // E.g.: { genre: ['Legend', 'Myth'], language_of_origin: ['Spanish'] }
@@ -92,6 +93,7 @@ export function useFolkloreCollections() {
   // Fetching Data
   // -----------------------------------
   async function fetchCollections() {
+    if (isAllDataFetched.value) return;
     try {
       let path = `${import.meta.env.VITE_BACKEND_API}/folklore/`;
       const response = await fetch(path);
@@ -99,7 +101,33 @@ export function useFolkloreCollections() {
       collections.value = await response.json();
       paginationState.value.currentPage = 0; // reset to first page
       paginationState.value.userRequestedMaximumItems = collections.value.length;
-      collectionMode.value = true;
+      isNormalMode.value = true;
+      isAllDataFetched.value = true;
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function fetchInitialCollections() {
+    try {
+      const numEntriesResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/count`);
+      if (!numEntriesResponse.ok) throw new Error("Failed to fetch data");
+      const numEntries = await numEntriesResponse.json();
+      collections.value = new Array(numEntries).fill(null);
+
+      // Load first five pages of data
+      for (let page = 1; page <= 5; page++) {
+        const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/paginated?page=${page}&page_size=20`);
+        if (!dataResponse.ok) throw new Error("Failed to fetch data");
+        const data = await dataResponse.json();
+        data.forEach((entry: FolkloreCollection, index: number) => {
+          collections.value[(page - 1) * 20 + index] = entry;
+        });
+      }
+      
+      paginationState.value.currentPage = 0; // Set to first page
+      paginationState.value.userRequestedMaximumItems = collections.value.length;
+      isNormalMode.value = true;
     } catch (err) {
       console.error(err);
     }
@@ -109,10 +137,13 @@ export function useFolkloreCollections() {
     if (filteredCollections.value.length === 0) {
       return;
     }
-    const randomItem = filteredCollections.value[Math.floor(Math.random() * filteredCollections.value.length)];
+    let randomItem = collections.value[Math.floor(Math.random() * 100)]; // If only initial pages loaded, avoid nulls
+    if (isAllDataFetched.value) {
+      randomItem = filteredCollections.value[Math.floor(Math.random() * filteredCollections.value.length)];
+    }
     randomCollections.value = [randomItem];
     paginationState.value.currentPage = 0; // reset to first page
-    collectionMode.value = false;
+    isNormalMode.value = false;
   }
 
   // -----------------------------------
@@ -131,7 +162,7 @@ export function useFolkloreCollections() {
       });
 
     // Populate sets by reading the path on each collection
-    const relevant_collections = collectionMode.value ? collections.value : randomCollections.value;
+    const relevant_collections = isNormalMode.value ? collections.value : randomCollections.value;
     relevant_collections.forEach((col) => {
       fields
         .filter((f) => f.filterable)
@@ -154,7 +185,7 @@ export function useFolkloreCollections() {
   // 2) Apply filters: For each field, if selectedFilters[field].length > 0,
   //    we only keep items matching that field's value.
   const filteredCollections = computed(() => {
-    const relevant_collections = collectionMode.value ? collections.value : randomCollections.value;
+    const relevant_collections = isNormalMode.value ? collections.value : randomCollections.value;
     return relevant_collections.filter((col) => {
       let matchesAll = true;
       // Check each filterable field's selections
@@ -181,7 +212,10 @@ export function useFolkloreCollections() {
 
   // 4) Total pages
   const totalPages = computed(() => {
-    const entriesLength = Math.min(filteredCollections.value.length, paginationState.value.userRequestedMaximumItems);
+    let entriesLength = Math.min(collections.value.length, paginationState.value.userRequestedMaximumItems);
+    if (isAllDataFetched.value) {
+      entriesLength = Math.min(filteredCollections.value.length, paginationState.value.userRequestedMaximumItems);
+    }
     return Math.ceil(entriesLength / paginationState.value.itemsPerPage);
   });
 
@@ -193,14 +227,24 @@ export function useFolkloreCollections() {
     return path.split(".").reduce((acc, part) => acc?.[part], obj);
   }
 
-  function goToPage(pageIndex: number) {
+  async function goToPage(pageIndex: number) {
     paginationState.value.currentPage = pageIndex;
+    if (collections.value[pageIndex * paginationState.value.itemsPerPage] == null) {
+      const path = `${import.meta.env.VITE_BACKEND_API}/folklore/paginated?page=${pageIndex}&page_size=${paginationState.value.itemsPerPage}`;
+      const dataResponse = await fetch(path);
+      if (!dataResponse.ok) throw new Error("Failed to fetch data");
+      const data = await dataResponse.json();
+      data.forEach((entry: FolkloreCollection, index: number) => {
+        collections.value[pageIndex * paginationState.value.itemsPerPage + index] = entry;
+      });
+    }
   }
 
   // Reset page when filters change
   watch(
     selectedFilters,
     () => {
+      fetchCollections(); // Need to have all data to correctly filter
       paginationState.value.currentPage = 0;
     },
     { deep: true }
@@ -213,7 +257,7 @@ export function useFolkloreCollections() {
     // Data
     collections,
     randomCollections,
-    collectionMode,
+    isNormalMode,
     fields,
     selectedFilters,
     paginationState,
@@ -226,6 +270,7 @@ export function useFolkloreCollections() {
 
     // Methods
     fetchCollections,
+    fetchInitialCollections,
     fetchRandom,
     goToPage,
     getNestedValue,
