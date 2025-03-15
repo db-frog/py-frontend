@@ -22,7 +22,6 @@ export function useFolkloreCollections() {
   const collections = ref<FolkloreCollection[]>([]);
   const randomCollections = ref<FolkloreCollection[]>([]);
   const isNormalMode = ref<boolean>(true); // False for random collection
-  const isAllDataFetched = ref<boolean>(false);
 
   // We'll store filters in an object: { fieldKey: string[] }
   // E.g.: { genre: ['Legend', 'Myth'], language_of_origin: ['Spanish'] }
@@ -92,36 +91,42 @@ export function useFolkloreCollections() {
   // -----------------------------------
   // Fetching Data
   // -----------------------------------
-  async function fetchCollections() {
-    if (isAllDataFetched.value) return;
-    try {
-      let path = `${import.meta.env.VITE_BACKEND_API}/folklore/`;
-      const response = await fetch(path);
-      if (!response.ok) throw new Error("Failed to fetch data");
-      collections.value = await response.json();
-      paginationState.value.currentPage = 0; // reset to first page
-      paginationState.value.userRequestedMaximumItems = collections.value.length;
-      isNormalMode.value = true;
-      isAllDataFetched.value = true;
-    } catch (err) {
-      console.error(err);
-    }
-  }
+  // async function fetchCollections() {
+  //   if (isAllDataFetched.value) return;
+  //   try {
+  //     let path = `${import.meta.env.VITE_BACKEND_API}/folklore/`;
+  //     const response = await fetch(path);
+  //     if (!response.ok) throw new Error("Failed to fetch data");
+  //     collections.value = await response.json();
+  //     paginationState.value.currentPage = 0; // reset to first page
+  //     paginationState.value.userRequestedMaximumItems = collections.value.length;
+  //     isNormalMode.value = true;
+  //     isAllDataFetched.value = true;
+  //   } catch (err) {
+  //     console.error(err);
+  //   }
+  // }
 
   async function fetchInitialCollections() {
     try {
-      const numEntriesResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/count`);
+      const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
+      const numEntriesResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/count?filters=${filtersJson}`);
       if (!numEntriesResponse.ok) throw new Error("Failed to fetch data");
       const numEntries = await numEntriesResponse.json();
       collections.value = new Array(numEntries).fill(null);
 
       // Load first five pages of data
       for (let page = 1; page <= 5; page++) {
-        const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/paginated?page=${page}&page_size=20`);
+        const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/paginated?page=${page}&page_size=20&filters=${filtersJson}`);
         if (!dataResponse.ok) throw new Error("Failed to fetch data");
         const data = await dataResponse.json();
+        const startIndex = (page - 1) * 20;
+        const endIndex = Math.min(startIndex + data.length, numEntries);
         data.forEach((entry: FolkloreCollection, index: number) => {
-          collections.value[(page - 1) * 20 + index] = entry;
+          const targetIndex = startIndex + index;
+          if (targetIndex < endIndex) {
+            collections.value[targetIndex] = entry;
+          }
         });
       }
       
@@ -133,15 +138,12 @@ export function useFolkloreCollections() {
     }
   }
 
-  function fetchRandom() {
-    if (filteredCollections.value.length === 0) {
-      return;
-    }
-    let randomItem = collections.value[Math.floor(Math.random() * 100)]; // If only initial pages loaded, avoid nulls
-    if (isAllDataFetched.value) {
-      randomItem = filteredCollections.value[Math.floor(Math.random() * filteredCollections.value.length)];
-    }
-    randomCollections.value = [randomItem];
+  async function fetchRandom() {
+    const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
+    const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/random?filters=${filtersJson}`);
+    if (!dataResponse.ok) throw new Error("Failed to fetch data");
+    const data = await dataResponse.json();
+    randomCollections.value = data;
     paginationState.value.currentPage = 0; // reset to first page
     isNormalMode.value = false;
   }
@@ -184,38 +186,37 @@ export function useFolkloreCollections() {
 
   // 2) Apply filters: For each field, if selectedFilters[field].length > 0,
   //    we only keep items matching that field's value.
-  const filteredCollections = computed(() => {
-    const relevant_collections = isNormalMode.value ? collections.value : randomCollections.value;
-    return relevant_collections.filter((col) => {
-      let matchesAll = true;
-      // Check each filterable field's selections
-      for (const f of fields.filter((x) => x.filterable)) {
-        const filterValues = selectedFilters.value[f.key] || [];
-        if (filterValues.length === 0) continue; // no filter for this field
+  // const filteredCollections = computed(() => {
+  //   const relevant_collections = isNormalMode.value ? collections.value : randomCollections.value;
+  //   return relevant_collections.filter((col) => {
+  //     let matchesAll = true;
+  //     // Check each filterable field's selections
+  //     for (const f of fields.filter((x) => x.filterable)) {
+  //       const filterValues = selectedFilters.value[f.key] || [];
+  //       if (filterValues.length === 0) continue; // no filter for this field
 
-        const val = getNestedValue(col, f.path);
-        if (!val || !filterValues.includes(String(val))) {
-          matchesAll = false;
-          break;
-        }
-      }
-      return matchesAll;
-    });
-  });
+  //       const val = getNestedValue(col, f.path);
+  //       if (!val || !filterValues.includes(String(val))) {
+  //         matchesAll = false;
+  //         break;
+  //       }
+  //     }
+  //     return matchesAll;
+  //   });
+  // });
 
   // 3) Paginated result
   const paginatedCollections = computed(() => {
     const startIndex = paginationState.value.currentPage * paginationState.value.itemsPerPage;
     const endIndex = startIndex + paginationState.value.itemsPerPage;
-    return filteredCollections.value.slice(0, paginationState.value.userRequestedMaximumItems).slice(startIndex, endIndex);
+    const relevant_collections = isNormalMode.value ? collections.value : randomCollections.value;
+    return relevant_collections.slice(0, paginationState.value.userRequestedMaximumItems).slice(startIndex, endIndex);
   });
 
   // 4) Total pages
   const totalPages = computed(() => {
-    let entriesLength = Math.min(collections.value.length, paginationState.value.userRequestedMaximumItems);
-    if (isAllDataFetched.value) {
-      entriesLength = Math.min(filteredCollections.value.length, paginationState.value.userRequestedMaximumItems);
-    }
+    const relevant_collections = isNormalMode.value ? collections.value : randomCollections.value;
+    let entriesLength = Math.min(relevant_collections.length, paginationState.value.userRequestedMaximumItems);
     return Math.ceil(entriesLength / paginationState.value.itemsPerPage);
   });
 
@@ -230,7 +231,8 @@ export function useFolkloreCollections() {
   async function goToPage(pageIndex: number) {
     paginationState.value.currentPage = pageIndex;
     if (collections.value[pageIndex * paginationState.value.itemsPerPage] == null) {
-      const path = `${import.meta.env.VITE_BACKEND_API}/folklore/paginated?page=${pageIndex}&page_size=${paginationState.value.itemsPerPage}`;
+      const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
+      const path = `${import.meta.env.VITE_BACKEND_API}/folklore/paginated?page=${pageIndex}&page_size=${paginationState.value.itemsPerPage}&filters=${filtersJson}`;
       const dataResponse = await fetch(path);
       if (!dataResponse.ok) throw new Error("Failed to fetch data");
       const data = await dataResponse.json();
@@ -244,7 +246,7 @@ export function useFolkloreCollections() {
   watch(
     selectedFilters,
     () => {
-      fetchCollections(); // Need to have all data to correctly filter
+      fetchInitialCollections();
       paginationState.value.currentPage = 0;
     },
     { deep: true }
@@ -264,12 +266,11 @@ export function useFolkloreCollections() {
     uniqueOptions,
 
     // Computed
-    filteredCollections,
+    // filteredCollections,
     paginatedCollections,
     totalPages,
 
     // Methods
-    fetchCollections,
     fetchInitialCollections,
     fetchRandom,
     goToPage,

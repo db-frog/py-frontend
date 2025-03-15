@@ -129,7 +129,6 @@ export default defineComponent({
       uniqueOptions,
       totalPages,
       paginatedCollections,
-      fetchCollections,
       fetchInitialCollections,
       fetchRandom,
       goToPage,
@@ -153,7 +152,7 @@ export default defineComponent({
 
     async function handleFetchRandom() {
       isLoading.value = true;
-      fetchRandom();
+      await fetchRandom();
       isLoading.value = false;
     }
 
@@ -224,7 +223,6 @@ export default defineComponent({
       uniqueOptions,
       totalPages,
       paginatedCollections,
-      fetchCollections,
       goToPage,
       displayPages,
       goToPageIndex,
