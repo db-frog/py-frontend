@@ -132,6 +132,7 @@ export default defineComponent({
       fetchInitialCollections,
       fetchRandom,
       goToPage,
+      populateUniqueOptions,
     } = useFolkloreCollections();
 
     // Use a local state for loading
@@ -209,6 +210,7 @@ export default defineComponent({
       try {
         isLoading.value = true;
         await fetchInitialCollections(); // fetch data
+        await populateUniqueOptions(); // fetch filters
       } finally {
         isLoading.value = false;
       }

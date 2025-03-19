@@ -152,37 +152,7 @@ export function useFolkloreCollections() {
   // Filtering Logic
   // -----------------------------------
   // 1) Identify unique options for each filterable field
-  const uniqueOptions = computed(() => {
-    // Build an object: { fieldKey: Set<string> }
-    const result: Record<string, Set<string>> = {};
-
-    // Initialize sets for each filterable field
-    fields
-      .filter((f) => f.filterable)
-      .forEach((f) => {
-        result[f.key] = new Set();
-      });
-
-    // Populate sets by reading the path on each collection
-    const relevant_collections = isNormalMode.value ? collections.value : randomCollections.value;
-    relevant_collections.forEach((col) => {
-      fields
-        .filter((f) => f.filterable)
-        .forEach((f) => {
-          const val = getNestedValue(col, f.path);
-          if (val) {
-            result[f.key].add(String(val));
-          }
-        });
-    });
-
-    // Convert each set to a sorted array
-    const final: Record<string, string[]> = {};
-    for (const key of Object.keys(result)) {
-      final[key] = Array.from(result[key]).sort();
-    }
-    return final;
-  });
+  const uniqueOptions = ref<Record<string, string[]>>({});
 
   // 2) Apply filters: For each field, if selectedFilters[field].length > 0,
   //    we only keep items matching that field's value.
@@ -242,6 +212,20 @@ export function useFolkloreCollections() {
     }
   }
 
+  async function populateUniqueOptions() {
+    if (Object.keys(uniqueOptions.value).length != 0) {
+      return;
+    }
+    const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/filters`);
+    if (!dataResponse.ok) throw new Error("Failed to fetch filters");
+    const endpointResult = await dataResponse.json();
+    const final: Record<string, string[]> = {};
+    for (const key of Object.keys(endpointResult)) {
+      final[key] = endpointResult[key].sort();
+    }
+    uniqueOptions.value = final;
+  }
+
   // Reset page when filters change
   watch(
     selectedFilters,
@@ -274,6 +258,7 @@ export function useFolkloreCollections() {
     fetchInitialCollections,
     fetchRandom,
     goToPage,
+    populateUniqueOptions,
     getNestedValue,
   };
 }
