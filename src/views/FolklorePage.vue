@@ -2,6 +2,13 @@
   <div class="page-container">
     <!-- Sidebar -->
     <aside class="sidebar">
+      <div class="filter-section">
+        <h3>View</h3>
+        <select v-model="isTableView">
+          <option :value="true" selected>Table</option>
+          <option :value="false">Map</option>
+        </select>
+      </div>
       <div
         v-for="field of fields.filter(f => f.filterable)"
         :key="field.key"
@@ -71,32 +78,43 @@
     <div class="content-area">
       <h1>Berkeley Folklore Archive</h1>
 
-      <!-- Table Container with Fixed Height -->
-      <div class="table-container">
-        <DynamicTable
-          :rows="paginatedCollections"
-          :fields="fields"
-          :onRowClick="openModal"
-          :isLoading="isLoading"
-        />
-      </div>
+        <!-- Table Container with Fixed Height -->
+        <div class="table-container">
+          <DynamicTable
+            :rows="paginatedCollections"
+            :fields="fields"
+            :onRowClick="openModal"
+            :isLoading="isLoading"
+            v-if="isTableView"
+          />
 
-      <!-- Pagination, Modal, etc. -->
-      <div class="pagination-container" v-if="totalPages > 1">
-        <div v-for="(page, index) in displayPages" :key="index">
-          <!-- Ellipses -->
-          <span v-if="page === '...'">...</span>
-          <!-- Page Number -->
-          <span
-            v-else
-            class="page-number"
-            :class="{ active: paginationState.currentPage + 1 === page }"
-            @click="goToPageIndex(page)"
-          >
-            {{ page }}
-          </span>
+          <DynamicMap
+            :rows="paginatedCollections"
+            :testCollection="fullTestCollection"
+            :fields="fields"
+            :onRowClick="openModal"
+            :isLoading="isLoading"
+            v-if="!isTableView"
+          />
         </div>
-      </div>
+        
+
+        <!-- Pagination, Modal, etc. -->
+        <div class="pagination-container" v-if="totalPages > 1">
+          <div v-for="(page, index) in displayPages" :key="index">
+            <!-- Ellipses -->
+            <span v-if="page === '...'">...</span>
+            <!-- Page Number -->
+            <span
+              v-else
+              class="page-number"
+              :class="{ active: paginationState.currentPage + 1 === page }"
+              @click="goToPageIndex(page)"
+            >
+              {{ page }}
+            </span>
+          </div>
+        </div>
 
       <FolkloreModal
         v-if="showModal"
@@ -110,6 +128,7 @@
 <script lang="ts">
 import {defineComponent, computed, ref, onMounted} from "vue";
 import { useFolkloreCollections } from "@/composables/useFolkloreCollections";
+import DynamicMap from "@/components/DynamicMap.vue";
 import DynamicTable from "@/components/DynamicTable.vue";
 import FolkloreModal from "@/components/FolkloreModal.vue";
 
@@ -117,12 +136,13 @@ export default defineComponent({
   name: "FolklorePage",
   components: {
     DynamicTable,
+    DynamicMap,
     FolkloreModal,
   },
   setup() {
     const {
       collections,
-      isNormalMode,
+      isRandomCollection,
       fields,
       selectedFilters,
       paginationState,
@@ -130,6 +150,7 @@ export default defineComponent({
       totalPages,
       paginatedCollections,
       fetchInitialCollections,
+      isTableView,
       fetchRandom,
       goToPage,
       populateUniqueOptions,
@@ -141,6 +162,9 @@ export default defineComponent({
     // Modal state
     const showModal = ref(false);
     const selectedRow = ref(undefined);
+
+    // For testing map
+    const fullTestCollection = ref([]);
 
     function openModal(row: any) {
       selectedRow.value = row;
@@ -157,6 +181,17 @@ export default defineComponent({
       isLoading.value = false;
     }
 
+     // For test purpose of all entries
+     async function fetchCollections() {
+      try {
+        const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/`);
+        if (!dataResponse.ok) throw new Error("Failed to fetch data");
+        return await dataResponse.json();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
     function resetUserPagination() {
       paginationState.value.userRequestedMaximumItems = collections.value.length;
       paginationState.value.itemsPerPage = 20;
@@ -165,7 +200,7 @@ export default defineComponent({
 
     function undoRandom() {
       isLoading.value = true;
-      isNormalMode.value = true;
+      isRandomCollection.value = false;
       isLoading.value = false;
     }
 
@@ -210,6 +245,7 @@ export default defineComponent({
       try {
         isLoading.value = true;
         await fetchInitialCollections(); // fetch data
+        fullTestCollection.value = await fetchCollections(); // Just here for testing map with all entries
         await populateUniqueOptions(); // fetch filters
       } finally {
         isLoading.value = false;
@@ -217,18 +253,23 @@ export default defineComponent({
     });
 
     return {
+      // Data
       collections,
-      isNormalMode,
+      isRandomCollection,
       fields,
       selectedFilters,
       paginationState,
       uniqueOptions,
       totalPages,
       paginatedCollections,
+      isLoading,
+      isTableView,
+      fullTestCollection,
+
+      // Functions
       goToPage,
       displayPages,
       goToPageIndex,
-      isLoading,
       resetUserPagination,
       handleFetchRandom,
       displayCurrentPage,
