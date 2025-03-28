@@ -1,9 +1,10 @@
 <template>
   <div class="map-container">
+    <h4 id="item-count"></h4>
     <div id="map"></div>
     <div v-if="selectedCollections && showDynamicTable" class="table-container">
         <button @click="showDynamicTable = false" class="close-btn">Close</button>
-        <h3 class="place_header">Found {{selectedCollections.length}} items in {{selectedCity}}</h3>
+        <h3 class="place_header">Found {{selectedCollections.length}} item(s) about {{selectedCity}}</h3>
         <DynamicTable :rows="selectedCollections" :fields="$props.fields" :isLoading="isLoading" :onRowClick="$props.onRowClick" />
     </div>
   </div>
@@ -13,7 +14,7 @@
 import type { FieldDefinition } from "@/composables/useFolkloreCollections";
 import type { FolkloreCollection, Location } from "@/types";
 import type { PropType } from "vue";
-import { defineComponent, onMounted, ref } from "vue";
+import { defineComponent, onMounted, ref, watch } from "vue";
 import DynamicTable from "./DynamicTable.vue";
 import { Map, Marker } from 'maplibre-gl';
 
@@ -39,10 +40,6 @@ export default defineComponent({
       type: Function as PropType<(row: any) => void>,
       default: () => {},
     },
-    testCollection: {
-      type: Array as PropType<FolkloreCollection[]>,
-      default: [],
-    }
   },
   setup(props) {
     let mapInstance: Map | null = null;
@@ -57,26 +54,31 @@ export default defineComponent({
       
       const dLat = lat2 - lat1;
       const dLon = lon2 - lon1;
-      
+
       const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     }
 
-    onMounted(() => {
+    function initializeMap() {
+      if (mapInstance) {
+        mapInstance.remove();
+      }
+
       mapInstance = new Map({
         container: 'map',
         style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
         center: [-122.2730, 37.8715], // Berkeley, CA
         zoom: 7
       });
+      let counter = 0;
+      // Group locations according to city name and longitude/latitude proximity
+      const groupedLocations: { [key: string]: { city: string; collections: any[] } } = {};
 
-      // Group locations according to city name and longitude / latitude proxmity 
-      const groupedLocations: { [key: string]: { city: string, collections: any[] } } = {};
-      
-      // To not display all entries, can pass in smaller dataset into props.rows
-      // Using all entries for now to test it out
-      props.testCollection.forEach((collection : FolkloreCollection) => {
+      props.rows.forEach((collection: FolkloreCollection) => {
+        if (!collection || !collection.folklore || !collection.folklore.place_mentioned) {
+          return;
+        }
         collection.folklore.place_mentioned.forEach((place: Location) => {
           if (place.geolocation && place.city) {
             const [lat, lon] = place.geolocation.split(",").map(Number);
@@ -109,19 +111,28 @@ export default defineComponent({
             // Step 4: Decide where to place the collection
             if (closestCityGroup) {
               groupedLocations[closestCityGroup].collections.push(collection);
-            } else if (Object.values(groupedLocations).some(group => group.city === place.city)) {
-              if (closestOverallGroup! != null) {
-                groupedLocations[closestOverallGroup!].collections.push(collection);
+              counter++;
+            } else if (Object.values(groupedLocations).some((group) => group.city === place.city)) {
+              if (closestOverallGroup != null) {
+                groupedLocations[closestOverallGroup].collections.push(collection);
+                counter++;
               }
             } else {
               const groupKey = `${lat},${lon}`;
               groupedLocations[groupKey] = { city: place.city, collections: [collection] };
+              counter++;
             }
           }
         });
       });
-      Object.entries(groupedLocations).forEach(([coords, { city, collections}]) => {
+      let itemElement = document.getElementById("item-count");
+      if (itemElement) {
+        itemElement.innerText = `${counter} item(s) on this page`;
+      }
+      
+      Object.entries(groupedLocations).forEach(([coords, { city, collections }]) => {
         const [lat, lon] = coords.split(",").map(Number);
+        mapInstance?.setCenter([lon, lat]);
         new Marker({
             color: "#ff7a70",
             scale: 1 + Math.min(2, (collections.length - 1) * .10),
@@ -134,6 +145,14 @@ export default defineComponent({
             showDynamicTable.value = true;
           });
       });
+    }
+
+    onMounted(() => {
+      initializeMap();
+    });
+
+    watch(() => props.rows, () => {
+      initializeMap();
     });
 
     return { selectedCollections, selectedCity, showDynamicTable};
@@ -147,6 +166,15 @@ export default defineComponent({
 #map {
   width: 100%;
   height: 100%;
+}
+
+#item-count {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 1rem;
+  text-align: center;
+  display: block;
+  z-index: 1;
 }
 
 .map-container {

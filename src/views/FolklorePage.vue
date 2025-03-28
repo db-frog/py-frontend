@@ -9,13 +9,20 @@
           <option :value="false">Map</option>
         </select>
       </div>
+      <div class="filter-section">
+        <h3>Filters</h3>
+        <button @click="handleFetchCollections()" class="filter-button">Apply Filters</button>
+        <button @click="clearFilters()" class="filter-button">Clear Filters</button>
+      </div>
       <div
         v-for="field of fields.filter(f => f.filterable)"
         :key="field.key"
         class="filter-section"
       >
-        <h3>{{ field.label }}</h3>
-        <ul>
+        <h3 class="filter-header">{{ field.label }}</h3>
+        <span class="expand-collapse-btn" v-if="isFieldExpand[field.key]" @click="isFieldExpand[field.key] = false">[-]</span>
+        <span class="expand-collapse-btn" v-else @click="isFieldExpand[field.key] = true">[+]</span>
+        <ul v-if="isFieldExpand[field.key]">
           <li
             v-for="(option, index) in uniqueOptions[field.key]"
             :key="option + index"
@@ -24,7 +31,7 @@
               <input
                 type="checkbox"
                 :value="option"
-                v-model="selectedFilters[field.key]"
+                v-model="selectedFilters[field.path]"
               />
               {{ option }}
             </label>
@@ -90,7 +97,6 @@
 
           <DynamicMap
             :rows="paginatedCollections"
-            :testCollection="fullTestCollection"
             :fields="fields"
             :onRowClick="openModal"
             :isLoading="isLoading"
@@ -145,6 +151,7 @@ export default defineComponent({
       isRandomCollection,
       fields,
       selectedFilters,
+      lastUsedSelectedFilters,
       paginationState,
       uniqueOptions,
       totalPages,
@@ -159,12 +166,17 @@ export default defineComponent({
     // Use a local state for loading
     const isLoading = ref(true);
 
+    // Tracks expand / collapse state for field filters
+    const isFieldExpand = ref<Record<string, boolean>>({});
+    fields.forEach((field) => {
+      if (field.filterable) {
+        isFieldExpand.value[field.key] = true;
+      }
+    })
+
     // Modal state
     const showModal = ref(false);
     const selectedRow = ref(undefined);
-
-    // For testing map
-    const fullTestCollection = ref([]);
 
     function openModal(row: any) {
       selectedRow.value = row;
@@ -175,21 +187,20 @@ export default defineComponent({
       selectedRow.value = undefined;
     }
 
+    // Utility Functions
     async function handleFetchRandom() {
       isLoading.value = true;
       await fetchRandom();
       isLoading.value = false;
     }
 
-     // For test purpose of all entries
-     async function fetchCollections() {
-      try {
-        const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/`);
-        if (!dataResponse.ok) throw new Error("Failed to fetch data");
-        return await dataResponse.json();
-      } catch (err) {
-        console.error(err);
+    async function handleFetchCollections() {
+      if (JSON.stringify(lastUsedSelectedFilters.value) === JSON.stringify(selectedFilters.value)) {
+        return;
       }
+      isLoading.value = true;
+      await fetchInitialCollections();
+      isLoading.value = false;
     }
 
     function resetUserPagination() {
@@ -202,6 +213,15 @@ export default defineComponent({
       isLoading.value = true;
       isRandomCollection.value = false;
       isLoading.value = false;
+    }
+
+    function clearFilters() {
+      selectedFilters.value = {
+          "folklore.genre": [],
+          "folklore.language_of_origin": [],
+          "location_collected.city": [],
+          "folklore.place_mentioned.city": [],
+        };
     }
 
     const displayCurrentPage = computed({
@@ -245,7 +265,6 @@ export default defineComponent({
       try {
         isLoading.value = true;
         await fetchInitialCollections(); // fetch data
-        fullTestCollection.value = await fetchCollections(); // Just here for testing map with all entries
         await populateUniqueOptions(); // fetch filters
       } finally {
         isLoading.value = false;
@@ -264,16 +283,19 @@ export default defineComponent({
       paginatedCollections,
       isLoading,
       isTableView,
-      fullTestCollection,
+      isFieldExpand,
 
       // Functions
       goToPage,
       displayPages,
       goToPageIndex,
       resetUserPagination,
+      fetchInitialCollections,
       handleFetchRandom,
+      handleFetchCollections,
       displayCurrentPage,
       undoRandom,
+      clearFilters,
 
       // modal
       showModal,
@@ -305,6 +327,8 @@ export default defineComponent({
 
 .sidebar {
   width: 250px;
+  height: 700px;
+  overflow-y: auto;
   list-style-type: none;
   background-color: var(--color-primary-white);
   border: 2px solid var(--color-primary-blue);
@@ -353,6 +377,27 @@ export default defineComponent({
   cursor: pointer;
 }
 
+.filter-button {
+  width: 100%;
+  padding: 0.5rem;
+}
+
+.filter-header {
+  display: inline-flex;
+  width: 90%;
+}
+
+.expand-collapse-btn {
+  margin-top: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.expand-collapse-btn:hover {
+  color: var(--color-secondary-darknavy);
+  cursor: pointer;
+}
 /*
    The remainder of horizontal space after the sidebar.
 */

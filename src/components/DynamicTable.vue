@@ -3,7 +3,7 @@
     <thead>
       <tr>
         <!-- Render each field as a header -->
-        <th v-for="field in fields" :key="field.key">
+        <th v-for="field of fields.filter(f => !f.hidden)" :key="field.key">
           {{ field.label }}
         </th>
       </tr>
@@ -16,7 +16,7 @@
       >
         <!-- Render each field cell -->
         <td
-          v-for="field in fields"
+          v-for="field of fields.filter(f => !f.hidden)"
           :key="field.key"
         >
           {{ getNestedValue(row, field.path) }}

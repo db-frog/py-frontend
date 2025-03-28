@@ -13,6 +13,7 @@ export interface FieldDefinition {
   label: string;
   path: string;       // Path in the FolkloreCollection object (dot notation)
   filterable?: boolean;
+  hidden?: boolean;
 }
 
 export function useFolkloreCollections() {
@@ -28,10 +29,14 @@ export function useFolkloreCollections() {
   // We'll store filters in an object: { fieldKey: string[] }
   // E.g.: { genre: ['Legend', 'Myth'], language_of_origin: ['Spanish'] }
   const selectedFilters = ref<Record<string, string[]>>({
-          genre: [],
-          language_of_origin: [],
+          "folklore.genre": [],
+          "folklore.language_of_origin": [],
+          "location_collected.city": [],
+          "folklore.place_mentioned.city": [],
           // add other filterable fields here as needed
         });
+  // To prevent repeat API calls with same filters as last call's
+  const lastUsedSelectedFilters = ref<Record<string, string[]>>();
   
   const paginationState = ref<Record<string, number>>({
     userRequestedMaximumItems: 0,
@@ -87,6 +92,14 @@ export function useFolkloreCollections() {
       key: "location_collected",
       label: "Location Collected",
       path: "location_collected.city", // or a custom approach
+      filterable: true,
+    },
+    {
+      key: "place_mentioned",
+      label: "City Mentioned",
+      path: "folklore.place_mentioned.city",
+      filterable: true,
+      hidden: true,
     },
   ];
 
@@ -120,6 +133,7 @@ export function useFolkloreCollections() {
       
       paginationState.value.currentPage = 0; // Set to first page
       paginationState.value.userRequestedMaximumItems = collections.value.length;
+      lastUsedSelectedFilters.value = JSON.parse(JSON.stringify(selectedFilters.value)); // deepcopy
       isRandomCollection.value = false;
     } catch (err) {
       console.error(err);
@@ -186,7 +200,14 @@ export function useFolkloreCollections() {
     if (Object.keys(uniqueOptions.value).length != 0) {
       return;
     }
-    const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/filters`);
+    let field_to_path_dict : Record<string, string> = {};
+    fields.forEach((field_info) => {
+      if (field_info.filterable) {
+        field_to_path_dict[field_info.key] = field_info.path;
+      }
+    });
+    const field_to_path_str = encodeURIComponent(JSON.stringify(field_to_path_dict));
+    const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/filters?field_to_path=${field_to_path_str}`);
     if (!dataResponse.ok) throw new Error("Failed to fetch filters");
     const endpointResult = await dataResponse.json();
     const final: Record<string, string[]> = {};
@@ -200,7 +221,6 @@ export function useFolkloreCollections() {
   watch(
     selectedFilters,
     () => {
-      fetchInitialCollections();
       paginationState.value.currentPage = 0;
     },
     { deep: true }
@@ -216,6 +236,7 @@ export function useFolkloreCollections() {
     isRandomCollection,
     fields,
     selectedFilters,
+    lastUsedSelectedFilters,
     paginationState,
     uniqueOptions,
     isTableView,
