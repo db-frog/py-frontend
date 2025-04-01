@@ -218,13 +218,13 @@ export function useFolkloreCollections() {
   }
 
   // Reset page when filters change
-  watch(
-    selectedFilters,
-    () => {
-      paginationState.value.currentPage = 0;
-    },
-    { deep: true }
-  );
+  // watch(
+  //   selectedFilters,
+  //   () => {
+  //     paginationState.value.currentPage = 0;
+  //   },
+  //   { deep: true }
+  // );
 
   // -----------------------------------
   // Return from composable

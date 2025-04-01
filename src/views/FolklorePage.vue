@@ -200,6 +200,7 @@ export default defineComponent({
       }
       isLoading.value = true;
       await fetchInitialCollections();
+      paginationState.value.currentPage = 0;
       isLoading.value = false;
     }
 
