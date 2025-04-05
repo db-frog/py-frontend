@@ -1,142 +1,118 @@
 <template>
   <div class="page-container">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="filter-section">
-        <h3>View</h3>
-        <select v-model="isTableView">
-          <option :value="true" selected>Table</option>
-          <option :value="false">Map</option>
-        </select>
-      </div>
-      <div class="filter-section">
-        <h3>Filters</h3>
-        <button @click="handleFetchCollections()" class="filter-button">Apply Filters</button>
-        <button @click="clearFilters()" class="filter-button">Clear Filters</button>
-      </div>
-      <div
-        v-for="field of fields.filter(f => f.filterable)"
-        :key="field.key"
-        class="filter-section"
-      >
-        <h3 class="filter-header">{{ field.label }}</h3>
-        <span class="expand-collapse-btn" v-if="isFieldExpand[field.key]" @click="isFieldExpand[field.key] = false">[-]</span>
-        <span class="expand-collapse-btn" v-else @click="isFieldExpand[field.key] = true">[+]</span>
-        <ul v-if="isFieldExpand[field.key]">
-          <li
-            v-for="(option, index) in uniqueOptions[field.key]"
-            :key="option + index"
-          >
-            <label>
-              <input
-                type="checkbox"
-                :value="option"
-                v-model="selectedFilters[field.path]"
-              />
-              {{ option }}
-            </label>
-          </li>
-        </ul>
-      </div>
-      <div class="filter-section">
-        <h3>Pagination</h3>
-        <label>
-              Maximum items
-              <input
-                type="number"
-                min="1"
-                v-model="paginationState.userRequestedMaximumItems"
-                :max="collections.length"
-                style="width: 3rem;"
-              />
-        </label>
-        <br>
-        <label>
-              Items per page
-              <input
-                type="number"
-                min="1"
-                max="20"
-                v-model="paginationState.itemsPerPage"
-                style="width: 3rem;"
-              />
-        </label>
-        <br>
-        <label>
-              Current page
-              <input
-                type="number"
-                min="1"
-                :max="totalPages"
-                v-model="displayCurrentPage"
-                style="width: 3rem;"
-              />
-        </label>
-        <button @click="resetUserPagination">Reset</button>
-      </div>
-      <div class="filter-section">
-        <h3>Random Item</h3>
-        <button @click="handleFetchRandom">Generate</button>
-        <button @click="undoRandom">Show all</button>
-      </div>
-    </aside>
+    <SidebarFilters>
+      <template #filters>
+        <!-- View Section -->
+        <SidebarFilter label="View" :collapsible="false">
+          <select v-model="isTableView">
+            <option :value="true">Table</option>
+            <option :value="false">Map</option>
+          </select>
+        </SidebarFilter>
+
+        <!-- Filters Section -->
+        <SidebarFilter label="Filters" :collapsible="false">
+          <button @click="handleFetchCollections" class="filter-button">Apply Filters</button>
+          <button @click="clearFilters" class="filter-button">Clear Filters</button>
+        </SidebarFilter>
+
+        <!-- Dynamic Field Filters -->
+        <SidebarFilter
+          v-for="field in filterableFields"
+          :key="field.key"
+          :label="field.label"
+        >
+          <ul>
+            <li v-for="(option, index) in uniqueOptions[field.key]" :key="option + index">
+              <label>
+                <input type="checkbox" :value="option" v-model="selectedFilters[field.path]" />
+                {{ option }}
+              </label>
+            </li>
+          </ul>
+        </SidebarFilter>
+
+        <!-- Pagination Section -->
+        <SidebarFilter label="Pagination" :collapsible="false">
+          <label>
+            Maximum items
+            <input type="number" min="1" v-model="paginationState.userRequestedMaximumItems" :max="collections.length" style="width: 3rem;" />
+          </label>
+          <br />
+          <label>
+            Items per page
+            <input type="number" min="1" max="20" v-model="paginationState.itemsPerPage" style="width: 3rem;" />
+          </label>
+          <br />
+          <label>
+            Current page
+            <input type="number" min="1" :max="totalPages" v-model="displayCurrentPage" style="width: 3rem;" />
+          </label>
+          <button @click="resetUserPagination">Reset</button>
+        </SidebarFilter>
+
+        <!-- Random Item Section -->
+        <SidebarFilter label="Random Item" :collapsible="false">
+          <button @click="handleFetchRandom">Generate</button>
+          <button @click="undoRandom">Show all</button>
+        </SidebarFilter>
+      </template>
+    </SidebarFilters>
 
     <!-- Main Content -->
     <div class="content-area">
       <h1>Berkeley Folklore Archive</h1>
-
-        <!-- Table Container with Fixed Height -->
-        <div class="table-container">
-          <DynamicTable
-            :rows="paginatedCollections"
-            :fields="fields"
-            :onRowClick="openModal"
-            :isLoading="isLoading"
-            v-if="isTableView"
-          />
-
-          <DynamicMap
-            :rows="paginatedCollections"
-            :fields="fields"
-            :onRowClick="openModal"
-            :isLoading="isLoading"
-            v-if="!isTableView"
-          />
+      <div class="table-container">
+        <DynamicTable
+          v-if="isTableView"
+          :rows="paginatedCollections"
+          :fields="fields"
+          :onRowClick="openModal"
+          :isLoading="isLoading"
+        />
+        <DynamicMap
+          v-else
+          :rows="paginatedCollections"
+          :fields="fields"
+          :onRowClick="openModal"
+          :isLoading="isLoading"
+        />
+      </div>
+      <div class="pagination-container" v-if="totalPages > 1">
+        <div v-for="(page, index) in displayPages" :key="index">
+          <span v-if="page === '...'">...</span>
+          <span
+            v-else
+            class="page-number"
+            :class="{ active: paginationState.currentPage + 1 === page }"
+            @click="goToPageIndex(page)"
+          >
+            {{ page }}
+          </span>
         </div>
-        
-
-        <!-- Pagination, Modal, etc. -->
-        <div class="pagination-container" v-if="totalPages > 1">
-          <div v-for="(page, index) in displayPages" :key="index">
-            <!-- Ellipses -->
-            <span v-if="page === '...'">...</span>
-            <!-- Page Number -->
-            <span
-              v-else
-              class="page-number"
-              :class="{ active: paginationState.currentPage + 1 === page }"
-              @click="goToPageIndex(page)"
-            >
-              {{ page }}
-            </span>
-          </div>
-        </div>
-
-      <FolkloreModal
-        v-if="showModal"
-        :collection="selectedRow"
-        :onClose="closeModal"
-      />
+      </div>
+      <FolkloreModal v-if="showModal" :collection="selectedRow" :onClose="closeModal" />
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import {defineComponent, computed, ref, onMounted} from "vue";
+import { defineComponent, computed, ref, onMounted } from "vue";
 import { useFolkloreCollections } from "@/composables/useFolkloreCollections";
 import DynamicMap from "@/components/DynamicMap.vue";
 import DynamicTable from "@/components/DynamicTable.vue";
 import FolkloreModal from "@/components/FolkloreModal.vue";
+import SidebarFilters from "@/components/SidebarFilters.vue";
+import SidebarFilter from "@/components/SidebarFilter.vue";
+import {
+  useHandleFetchRandom,
+  useHandleFetchCollections,
+  useResetUserPagination,
+  useUndoRandom,
+  useClearFilters,
+  useGoToPageIndex,
+} from "@/composables/useFolkloreUtils";
+import { usePagination } from "@/composables/usePagination";
 
 export default defineComponent({
   name: "FolklorePage",
@@ -144,6 +120,8 @@ export default defineComponent({
     DynamicTable,
     DynamicMap,
     FolkloreModal,
+    SidebarFilters,
+    SidebarFilter,
   },
   setup() {
     const {
@@ -163,20 +141,11 @@ export default defineComponent({
       populateUniqueOptions,
     } = useFolkloreCollections();
 
-    // Use a local state for loading
+    const filterableFields = computed(() => fields.filter((f) => f.filterable));
+
     const isLoading = ref(true);
-
-    // Tracks expand / collapse state for field filters
-    const isFieldExpand = ref<Record<string, boolean>>({});
-    fields.forEach((field) => {
-      if (field.filterable) {
-        isFieldExpand.value[field.key] = true;
-      }
-    })
-
-    // Modal state
     const showModal = ref(false);
-    const selectedRow = ref(undefined);
+    const selectedRow = ref(null);
 
     function openModal(row: any) {
       selectedRow.value = row;
@@ -184,99 +153,46 @@ export default defineComponent({
     }
     function closeModal() {
       showModal.value = false;
-      selectedRow.value = undefined;
+      selectedRow.value = null;
     }
 
-    // Utility Functions
-    async function handleFetchRandom() {
-      isLoading.value = true;
-      await fetchRandom();
-      isLoading.value = false;
-    }
+    const handleFetchRandom = useHandleFetchRandom(isLoading, fetchRandom);
+    const handleFetchCollections = useHandleFetchCollections(
+      selectedFilters,
+      lastUsedSelectedFilters,
+      isLoading,
+      fetchInitialCollections,
+      paginationState
+    );
+    const resetUserPagination = useResetUserPagination(collections, paginationState);
+    const undoRandom = useUndoRandom(isLoading, isRandomCollection);
+    const clearFilters = useClearFilters(selectedFilters);
+    const goToPageIndex = useGoToPageIndex(isLoading, goToPage);
 
-    async function handleFetchCollections() {
-      if (JSON.stringify(lastUsedSelectedFilters.value) === JSON.stringify(selectedFilters.value)) {
-        return;
-      }
-      isLoading.value = true;
-      await fetchInitialCollections();
-      paginationState.value.currentPage = 0;
-      isLoading.value = false;
-    }
+    // Extracted pagination logic
+    const { displayCurrentPage, displayPages } = usePagination(
+      paginationState,
+      totalPages,
+      goToPageIndex
+    );
 
-    function resetUserPagination() {
-      paginationState.value.userRequestedMaximumItems = collections.value.length;
-      paginationState.value.itemsPerPage = 20;
-      paginationState.value.currentPage = 0;
-    }
-
-    function undoRandom() {
-      isLoading.value = true;
-      isRandomCollection.value = false;
-      isLoading.value = false;
-    }
-
-    function clearFilters() {
-      selectedFilters.value = {
-          "folklore.genre": [],
-          "folklore.language_of_origin": [],
-          "location_collected.city": [],
-          "folklore.place_mentioned.city": [],
-        };
-    }
-
-    const displayCurrentPage = computed({
-      get: () => paginationState.value.currentPage + 1,
-      set: (page: number) => goToPageIndex(page),
-    });
-
-    // Pagination with page numbers / ellipses
-    const displayPages = computed(() => {
-      const total = totalPages.value;
-      const current = paginationState.value.currentPage + 1;
-      const pages: (number | string)[] = [];
-
-      if (total <= 5) {
-        for (let i = 1; i <= total; i++) pages.push(i);
-        return pages;
-      }
-
-      pages.push(1, 2);
-      if (current > 4) pages.push("...");
-      const start = Math.max(3, current - 1);
-      const end = Math.min(total - 2, current + 1);
-      for (let i = start; i <= end; i++) pages.push(i);
-      if (current < total - 3) pages.push("...");
-      pages.push(total - 1, total);
-
-      // Remove duplicates
-      return pages.filter((p, i, arr) => p !== arr[i - 1]);
-    });
-
-    function goToPageIndex(page: number | string) {
-      if (typeof page === "number") {
-        isLoading.value = true;
-        goToPage(page - 1);
-        isLoading.value = false;
-      }
-    }
-
-    // Load collections on component mount
     onMounted(async () => {
+      isLoading.value = true;
       try {
-        isLoading.value = true;
-        await fetchInitialCollections(); // fetch data
-        await populateUniqueOptions(); // fetch filters
+        await fetchInitialCollections();
+        await populateUniqueOptions();
+      } catch (err) {
+        console.error(err);
       } finally {
         isLoading.value = false;
       }
     });
 
     return {
-      // Data
       collections,
       isRandomCollection,
       fields,
+      filterableFields,
       selectedFilters,
       paginationState,
       uniqueOptions,
@@ -284,21 +200,14 @@ export default defineComponent({
       paginatedCollections,
       isLoading,
       isTableView,
-      isFieldExpand,
-
-      // Functions
-      goToPage,
+      displayCurrentPage,
       displayPages,
-      goToPageIndex,
-      resetUserPagination,
-      fetchInitialCollections,
       handleFetchRandom,
       handleFetchCollections,
-      displayCurrentPage,
+      resetUserPagination,
       undoRandom,
       clearFilters,
-
-      // modal
+      goToPageIndex,
       showModal,
       selectedRow,
       openModal,
@@ -309,10 +218,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/*
-   The main container will be a row-based flex layout
-   so the sidebar and content are side-by-side.
-*/
 .page-container {
   display: flex;
   flex-direction: row;
@@ -322,100 +227,27 @@ export default defineComponent({
   min-height: 100vh;
   padding: 1rem;
 }
-.page-container h1 {
-  color: var(--color-primary-blue);
+
+@media (max-width: 768px) {
+  .page-container {
+    flex-direction: column;
+  }
+  .table-container {
+    width: 100%;
+  }
 }
 
-.sidebar {
-  width: 250px;
-  height: 700px;
-  overflow-y: auto;
-  list-style-type: none;
-  background-color: var(--color-primary-white);
-  border: 2px solid var(--color-primary-blue);
-  border-radius: 6px;
-  padding: 1rem;
-  color: var(--color-primary-blue);
-}
-
-/*
-   Each filter-section gets a max-height and scroll
-   so multiple filters don't push each other around.
-*/
-.filter-section {
-  list-style-type: none;
-  max-height: 250px;
-  overflow-y: auto;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--color-primary-blue);
-  padding-bottom: 0.5rem;
-}
-.filter-section h3 {
-  margin-top: 0;
-  color: var(--color-primary-yellow);
-  position: sticky;
-  top: 0;
-  background-color: var(--color-primary-white);
-  z-index: 1;
-}
-.filter-section input[type="checkbox"] {
-  accent-color: var(--color-primary-blue);
-}
-.filter-section label {
-  cursor: pointer;
-}
-.filter-section ul {
-  list-style-type: none;
-}
-.filter-section button {
-  background-color: var(--color-primary-blue);
-  color: var(--color-primary-white);
-  display: block;
-  margin-top: 0.5rem;
-}
-.filter-section button:hover {
-  background-color: var(--color-secondary-darknavy);
-  cursor: pointer;
-}
-
-.filter-button {
-  width: 100%;
-  padding: 0.5rem;
-}
-
-.filter-header {
-  display: inline-flex;
-  width: 90%;
-}
-
-.expand-collapse-btn {
-  margin-top: 0;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.expand-collapse-btn:hover {
-  color: var(--color-secondary-darknavy);
-  cursor: pointer;
-}
-/*
-   The remainder of horizontal space after the sidebar.
-*/
 .content-area {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-/*
-   Fix height and allow scroll.
-*/
 .table-container {
-  width: 1000px;       /* Fixed width for table container */
-  height: 600px;       /* Fixed height */
-  overflow-y: auto;    /* Vertical scroll if needed */
-  overflow-x: auto;    /* Horizontal scroll if content exceeds width */
+  width: 1000px;
+  height: 600px;
+  overflow-y: auto;
+  overflow-x: auto;
   border: 2px solid var(--color-primary-blue);
   border-radius: 4px;
   margin-bottom: 1rem;
@@ -423,15 +255,12 @@ export default defineComponent({
   color: var(--color-secondary-darknavy);
 }
 
-/*
-   Pagination or other content can be below the table,
-   not interfering with the table container's scrollbar.
-*/
 .pagination-container {
   display: flex;
   gap: 8px;
   justify-content: center;
 }
+
 .page-number {
   cursor: pointer;
   padding: 4px 8px;
@@ -440,14 +269,21 @@ export default defineComponent({
   background-color: var(--color-primary-blue);
   color: var(--color-primary-white);
 }
+
 .page-number:hover {
   background-color: var(--color-secondary-orange);
   border-color: var(--color-secondary-orange);
 }
+
 .page-number.active {
   font-weight: bold;
   background-color: var(--color-primary-yellow);
   color: var(--color-secondary-darknavy);
   border-color: var(--color-primary-blue);
+}
+
+.filter-button {
+  width: 100%;
+  padding: 0.5rem;
 }
 </style>
