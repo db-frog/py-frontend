@@ -24,15 +24,28 @@ export default defineComponent({
   name: "DynamicMap",
   components: { DynamicTable },
   props: {
-    rows: {
-      type: Array as PropType<any[]>,
-      default: () => [],
+    getData: {
+      type: Function as PropType<() => Promise<any>>,
+      default: () => {},
+    },
+    timeState: {
+      type: Object as PropType<Record<string, number>>,
+      default: ref<Record<string, number>>({
+        currentYear: 1960,
+        timeWindow: 500,
+        startYear: 1960,
+        endYear: 9999,
+      }),
     },
     fields: {
       type: Array as PropType<FieldDefinition[]>,
       default: () => [],
     },
     isLoading: {
+      type: Boolean,
+      default: false,
+    },
+    reload : {
       type: Boolean,
       default: false,
     },
@@ -46,6 +59,7 @@ export default defineComponent({
     const selectedCity = ref<string | null>(null);
     const selectedCollections = ref<any[] | null>(null);
     const showDynamicTable = ref<Boolean>(false);
+    const fullCollections = ref<FolkloreCollection[]>([]);
 
     function haversineDistance(coord1: [number, number], coord2: [number, number]): number {
       const R = 6371; // Earth's radius in km
@@ -60,7 +74,7 @@ export default defineComponent({
       return R * c;
     }
 
-    function initializeMap() {
+    async function initializeMap() {
       if (mapInstance) {
         mapInstance.remove();
       }
@@ -68,17 +82,29 @@ export default defineComponent({
       mapInstance = new Map({
         container: 'map',
         style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-        center: [-122.2730, 37.8715], // Berkeley, CA
-        zoom: 7
+        center: [0, 0],
+        zoom: 1,
       });
       let counter = 0;
       // Group locations according to city name and longitude/latitude proximity
       const groupedLocations: { [key: string]: { city: string; collections: any[] } } = {};
-
-      props.rows.forEach((collection: FolkloreCollection) => {
+      fullCollections.value.forEach((collection: FolkloreCollection) => {
         if (!collection || !collection.folklore || !collection.folklore.place_mentioned) {
           return;
         }
+
+        if (!collection.date_collected) {
+          return;
+        }
+        let date_split = collection.date_collected.split("-");
+        if (date_split.length < 3) {
+          return;
+        }
+        const year = parseInt(date_split[2]);
+        if (year < props.timeState.currentYear || year > props.timeState.currentYear + props.timeState.timeWindow) {
+          return;
+        }
+
         collection.folklore.place_mentioned.forEach((place: Location) => {
           if (place.geolocation && place.city) {
             const [lat, lon] = place.geolocation.split(",").map(Number);
@@ -127,12 +153,14 @@ export default defineComponent({
       });
       let itemElement = document.getElementById("item-count");
       if (itemElement) {
-        itemElement.innerText = `${counter} item(s) on this page`;
+        itemElement.innerText = `${counter} item(s) found from ${props.timeState.currentYear} to ${Math.min(props.timeState.currentYear + props.timeState.timeWindow, props.timeState.endYear)}`;
       }
       
       Object.entries(groupedLocations).forEach(([coords, { city, collections }]) => {
         const [lat, lon] = coords.split(",").map(Number);
-        mapInstance?.setCenter([lon, lat]);
+        if (Number.isNaN(lat) || Number.isNaN(lon)) {
+          return;
+        }
         new Marker({
             color: "#ff7a70",
             scale: 1 + Math.min(2, (collections.length - 1) * .10),
@@ -147,13 +175,19 @@ export default defineComponent({
       });
     }
 
-    onMounted(() => {
-      initializeMap();
+    onMounted(async () => {
+      fullCollections.value = await props.getData();
+      await initializeMap();
     });
 
-    watch(() => props.rows, () => {
-      initializeMap();
+    watch(() => props.reload, async () => {
+      fullCollections.value = await props.getData();
+      await initializeMap();
     });
+
+    watch(() => props.timeState, async () => {
+      await initializeMap();
+    }, { deep: true });
 
     return { selectedCollections, selectedCity, showDynamicTable};
   }
@@ -169,9 +203,8 @@ export default defineComponent({
 }
 
 #item-count {
-  margin-top: 1rem;
+  margin-top: 0.5rem;
   margin-bottom: 0.5rem;
-  padding: 0.5rem 1rem;
   text-align: center;
   display: block;
   z-index: 1;

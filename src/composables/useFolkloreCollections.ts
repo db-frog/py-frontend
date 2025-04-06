@@ -37,11 +37,22 @@ export function useFolkloreCollections() {
         });
   // To prevent repeat API calls with same filters as last call's
   const lastUsedSelectedFilters = ref<Record<string, string[]>>();
+  // This is a workaround for the map to re-render when filters change. Value doesn't matter.
+  const flipToReloadMap = ref(false);
   
+  // For table view
   const paginationState = ref<Record<string, number>>({
     userRequestedMaximumItems: 0,
     itemsPerPage: 20,
     currentPage: 0
+  });
+
+  // For map view
+  const timeState = ref<Record<string, number>>({
+    startYear: 1960,
+    endYear: new Date().getFullYear(),
+    timeWindow: 500,
+    currentYear: 1960,
   });
 
   // Define the fields we want to display/filter
@@ -140,6 +151,13 @@ export function useFolkloreCollections() {
     }
   }
 
+  async function fetchFilteredMapData() {
+    const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
+    const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/?filters=${filtersJson}`);
+    if (!dataResponse.ok) throw new Error("Failed to fetch data");
+    return await dataResponse.json();
+}
+
   async function fetchRandom() {
     const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
     const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/random?filters=${filtersJson}`);
@@ -217,15 +235,6 @@ export function useFolkloreCollections() {
     uniqueOptions.value = final;
   }
 
-  // Reset page when filters change
-  // watch(
-  //   selectedFilters,
-  //   () => {
-  //     paginationState.value.currentPage = 0;
-  //   },
-  //   { deep: true }
-  // );
-
   // -----------------------------------
   // Return from composable
   // -----------------------------------
@@ -238,8 +247,10 @@ export function useFolkloreCollections() {
     selectedFilters,
     lastUsedSelectedFilters,
     paginationState,
+    timeState,
     uniqueOptions,
     isTableView,
+    flipToReloadMap,
 
     // Computed
     paginatedCollections,
@@ -248,6 +259,7 @@ export function useFolkloreCollections() {
     // Methods
     fetchInitialCollections,
     fetchRandom,
+    fetchFilteredMapData,
     goToPage,
     populateUniqueOptions,
   };

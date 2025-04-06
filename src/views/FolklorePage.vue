@@ -9,36 +9,7 @@
           <option :value="false">Map</option>
         </select>
       </div>
-      <div class="filter-section">
-        <h3>Filters</h3>
-        <button @click="handleFetchCollections()" class="filter-button">Apply Filters</button>
-        <button @click="clearFilters()" class="filter-button">Clear Filters</button>
-      </div>
-      <div
-        v-for="field of fields.filter(f => f.filterable)"
-        :key="field.key"
-        class="filter-section"
-      >
-        <h3 class="filter-header">{{ field.label }}</h3>
-        <span class="expand-collapse-btn" v-if="isFieldExpand[field.key]" @click="isFieldExpand[field.key] = false">[-]</span>
-        <span class="expand-collapse-btn" v-else @click="isFieldExpand[field.key] = true">[+]</span>
-        <ul v-if="isFieldExpand[field.key]">
-          <li
-            v-for="(option, index) in uniqueOptions[field.key]"
-            :key="option + index"
-          >
-            <label>
-              <input
-                type="checkbox"
-                :value="option"
-                v-model="selectedFilters[field.path]"
-              />
-              {{ option }}
-            </label>
-          </li>
-        </ul>
-      </div>
-      <div class="filter-section">
+      <div class="filter-section" v-if="isTableView">
         <h3>Pagination</h3>
         <label>
               Maximum items
@@ -74,6 +45,83 @@
         </label>
         <button @click="resetUserPagination">Reset</button>
       </div>
+
+      <div class="filter-section" v-else>
+        <h3>Timeline Configuration</h3>
+        <label>
+              Timeline Start Year
+              <input
+                type="number"
+                min="0"
+                v-model="timeState.startYear"
+                :max="timeState.endYear - timeState.timeWindow"
+                style="width: 4rem;"
+              />
+        </label>
+        <br>
+        <label>
+              Timeline End Year
+              <input
+                type="number"
+                :min="timeState.startYear + timeState.timeWindow"
+                v-model="timeState.endYear"
+                style="width: 4rem;"
+              />
+        </label>
+        <br>
+        <label>
+              Display Start Year
+              <input
+                type="number"
+                :min="timeState.startYear"
+                :max="timeState.endYear - timeState.timeWindow"
+                v-model="timeState.currentYear"
+                style="width: 4rem;"
+              />
+        </label>
+        <br>
+        <label>
+              Window Duration (years)
+              <input
+                type="number"
+                min="1"
+                v-model="timeState.timeWindow"
+                style="width: 3rem;"
+              />
+        </label>
+        <button @click="resetUserTime">Reset</button>
+      </div>
+
+      <div class="filter-section">
+        <h3>Filters</h3>
+        <button @click="handleFetchCollections()" class="filter-button">Apply Filters</button>
+        <button @click="clearFilters()" class="filter-button">Clear Filters</button>
+      </div>
+      <div
+        v-for="field of fields.filter(f => f.filterable)"
+        :key="field.key"
+        class="filter-section"
+      >
+        <h3 class="filter-header">{{ field.label }}</h3>
+        <span class="expand-collapse-btn" v-if="isFieldExpand[field.key]" @click="isFieldExpand[field.key] = false">[-]</span>
+        <span class="expand-collapse-btn" v-else @click="isFieldExpand[field.key] = true">[+]</span>
+        <ul v-if="isFieldExpand[field.key]">
+          <li
+            v-for="(option, index) in uniqueOptions[field.key]"
+            :key="option + index"
+          >
+            <label>
+              <input
+                type="checkbox"
+                :value="option"
+                v-model="selectedFilters[field.path]"
+              />
+              {{ option }}
+            </label>
+          </li>
+        </ul>
+      </div>
+      
       <div class="filter-section">
         <h3>Random Item</h3>
         <button @click="handleFetchRandom">Generate</button>
@@ -96,7 +144,9 @@
           />
 
           <DynamicMap
-            :rows="paginatedCollections"
+            :getData="fetchFilteredMapData"
+            :timeState="timeState"
+            :reload="flipToReloadMap"
             :fields="fields"
             :onRowClick="openModal"
             :isLoading="isLoading"
@@ -106,7 +156,7 @@
         
 
         <!-- Pagination, Modal, etc. -->
-        <div class="pagination-container" v-if="totalPages > 1">
+        <div class="pagination-container" v-if="totalPages > 1 && isTableView">
           <div v-for="(page, index) in displayPages" :key="index">
             <!-- Ellipses -->
             <span v-if="page === '...'">...</span>
@@ -121,6 +171,23 @@
             </span>
           </div>
         </div>
+
+        <!-- Time interval buttons for map view -->
+         <div class="pagination-container" v-if="!isTableView">
+          <div v-for="(interval, index) in displayTime" :key="index">
+            <!-- Ellipses -->
+            <span v-if="interval[0] === '...'">...</span>
+            <!-- Time Interval -->
+            <span
+              v-else
+              class="page-number"
+              :class="{ active: timeState.currentYear === interval[0] }"
+              @click="goToTimeIndex(Number(interval[0]))"
+            >
+              {{ interval[0] }} - {{ interval[1] }}
+            </span>
+          </div>
+         </div>
 
       <FolkloreModal
         v-if="showModal"
@@ -151,12 +218,15 @@ export default defineComponent({
       isRandomCollection,
       fields,
       selectedFilters,
+      flipToReloadMap,
       lastUsedSelectedFilters,
       paginationState,
+      timeState,
       uniqueOptions,
       totalPages,
       paginatedCollections,
       fetchInitialCollections,
+      fetchFilteredMapData,
       isTableView,
       fetchRandom,
       goToPage,
@@ -200,6 +270,7 @@ export default defineComponent({
       }
       isLoading.value = true;
       await fetchInitialCollections();
+      flipToReloadMap.value = !flipToReloadMap.value;
       paginationState.value.currentPage = 0;
       isLoading.value = false;
     }
@@ -208,6 +279,13 @@ export default defineComponent({
       paginationState.value.userRequestedMaximumItems = collections.value.length;
       paginationState.value.itemsPerPage = 20;
       paginationState.value.currentPage = 0;
+    }
+
+    function resetUserTime() {
+      timeState.value.startYear = 1960;
+      timeState.value.endYear = new Date().getFullYear(),
+      timeState.value.timeWindow = 500;
+      timeState.value.currentYear = 1960;
     }
 
     function undoRandom() {
@@ -253,12 +331,53 @@ export default defineComponent({
       return pages.filter((p, i, arr) => p !== arr[i - 1]);
     });
 
+    // Pagination with page numbers / ellipses
+    const displayTime = computed(() => {
+      const startYear = timeState.value.startYear;
+      const endYear = timeState.value.endYear;
+      const timeWindow = timeState.value.timeWindow;
+      const currentYear = timeState.value.currentYear;
+
+      const total = Math.ceil((endYear - startYear) / timeWindow);
+      const currentIndex = Math.floor((currentYear - startYear) / timeWindow);
+      const intervals: (number | string)[][] = [];
+
+      const toRange = (index: number) => {
+        const start = startYear + index * timeWindow;
+        const end = Math.min(start + timeWindow, endYear);
+        return [start, end];
+      }
+
+      if (total <= 5) {
+        for (let i = 0; i < total; i++) {
+          intervals.push(toRange(i));
+        }
+        return intervals;
+      }
+
+      intervals.push(toRange(0), toRange(1));
+      if (currentIndex > 3) intervals.push(["...", "..."]);
+      const start = Math.max(2, currentIndex - 1);
+      const end = Math.min(total - 2, currentIndex + 1);
+      for (let i = start; i <= end; i++) {
+        intervals.push(toRange(i));
+      }
+      if (currentIndex < total - 4) intervals.push(["...", "..."]);
+      intervals.push(toRange(total - 2), toRange(total - 1));
+      // Remove duplicates
+      return intervals.filter((p, i, arr) => JSON.stringify(p) !== JSON.stringify(arr[i - 1]));
+    });
+
     function goToPageIndex(page: number | string) {
       if (typeof page === "number") {
         isLoading.value = true;
         goToPage(page - 1);
         isLoading.value = false;
       }
+    }
+
+    function goToTimeIndex(year: number) {
+      timeState.value.currentYear = year;
     }
 
     // Load collections on component mount
@@ -279,19 +398,25 @@ export default defineComponent({
       fields,
       selectedFilters,
       paginationState,
+      timeState,
       uniqueOptions,
       totalPages,
       paginatedCollections,
       isLoading,
       isTableView,
       isFieldExpand,
+      flipToReloadMap,
 
       // Functions
       goToPage,
       displayPages,
+      displayTime,
       goToPageIndex,
+      goToTimeIndex,
       resetUserPagination,
+      resetUserTime,
       fetchInitialCollections,
+      fetchFilteredMapData,
       handleFetchRandom,
       handleFetchCollections,
       displayCurrentPage,
