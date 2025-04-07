@@ -4,7 +4,7 @@
     <aside class="sidebar">
       <div class="filter-section">
         <h3>View</h3>
-        <select v-model="isTableView">
+        <select v-model="isTableView" @change="async () =>{ if (isTableView) await fetchInitialCollections() }">
           <option :value="true" selected>Table</option>
           <option :value="false">Map</option>
         </select>
@@ -269,9 +269,11 @@ export default defineComponent({
         return;
       }
       isLoading.value = true;
-      await fetchInitialCollections();
+      // Map view doesn't need paginated data
+      if (isTableView.value) {
+        await fetchInitialCollections();
+      }
       flipToReloadMap.value = !flipToReloadMap.value;
-      paginationState.value.currentPage = 0;
       isLoading.value = false;
     }
 

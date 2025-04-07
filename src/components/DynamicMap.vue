@@ -85,6 +85,8 @@ export default defineComponent({
         center: [0, 0],
         zoom: 1,
       });
+
+      document.getElementById("item-count").innerText = "Loading...";
       let counter = 0;
       // Group locations according to city name and longitude/latitude proximity
       const groupedLocations: { [key: string]: { city: string; collections: any[] } } = {};
@@ -176,11 +178,13 @@ export default defineComponent({
     }
 
     onMounted(async () => {
+      document.getElementById("item-count").innerText = "Loading...";
       fullCollections.value = await props.getData();
       await initializeMap();
     });
 
     watch(() => props.reload, async () => {
+      document.getElementById("item-count").innerText = "Loading...";
       fullCollections.value = await props.getData();
       await initializeMap();
     });
