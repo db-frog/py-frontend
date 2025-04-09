@@ -37,7 +37,7 @@
         <a class="close-btn" @click="onClose">Close</a>
         <a class="download"
            target="_blank" rel="noopener noreferrer"
-           :href="`https://env-2986297.us.reclaim.cloud/folklore/${collection._id}/download`"
+           :href="`${api}/folklore/${collection._id}/download`"
            @click.stop>
           Download
         </a>
@@ -50,6 +50,8 @@
 import { defineComponent } from "vue";
 import type { PropType } from "vue";
 import type { FolkloreCollection, Location } from "@/types"; // adjust path
+
+const api = import.meta.env.VITE_BACKEND_API
 
 export default defineComponent({
   name: "FolkloreModal",
@@ -72,6 +74,11 @@ export default defineComponent({
       return [location.city, location.state, location.country].filter(Boolean).join(", ");
     },
   },
+  setup() {
+    return {
+      api
+    };
+  }
 });
 </script>
 

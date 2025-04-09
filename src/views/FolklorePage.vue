@@ -103,6 +103,16 @@
           </label>
         </SidebarFilter>
 
+        <!-- Filters Section -->
+        <SidebarFilter label="Filters" :collapsible="false">
+          <button @click="handleFetchCollections"
+          class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
+          >Apply Filters</button>
+          <button @click="clearFilters"
+          class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
+          >Clear Filters</button>
+        </SidebarFilter>
+
         <!-- Dynamic Field Filters -->
         <SidebarFilter
           v-for="field in filterableFields"
@@ -118,16 +128,6 @@
               </label>
             </li>
           </ul>
-        </SidebarFilter>
-
-                <!-- Filters Section -->
-        <SidebarFilter label="Filters" :collapsible="false">
-          <button @click="handleFetchCollections"
-          class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
-          >Apply Filters</button>
-          <button @click="clearFilters"
-          class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
-          >Clear Filters</button>
         </SidebarFilter>
 
         <!-- Random Item Section -->
