@@ -98,6 +98,7 @@ export default defineComponent({
   position: relative;
   overflow-y: auto;
   max-height: 80vh;
+  color: #000;
 }
 
 .download {

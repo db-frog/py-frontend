@@ -13,6 +13,7 @@ export interface FieldDefinition {
   label: string;
   path: string;       // Path in the FolkloreCollection object (dot notation)
   filterable?: boolean;
+  hidden?: boolean;
 }
 
 export function useFolkloreCollections() {
@@ -20,17 +21,39 @@ export function useFolkloreCollections() {
   // Reactive State
   // -----------------------------------
   const collections = ref<FolkloreCollection[]>([]);
+  const randomCollections = ref<FolkloreCollection[]>([]);
+  const isRandomCollection = ref<boolean>(false);
+  const isTableView = ref<boolean>(true);
+  const uniqueOptions = ref<Record<string, string[]>>({});
 
   // We'll store filters in an object: { fieldKey: string[] }
   // E.g.: { genre: ['Legend', 'Myth'], language_of_origin: ['Spanish'] }
   const selectedFilters = ref<Record<string, string[]>>({
-          genre: [],
-          language_of_origin: [],
+          "folklore.genre": [],
+          "folklore.language_of_origin": [],
+          "location_collected.city": [],
+          "folklore.place_mentioned.city": [],
           // add other filterable fields here as needed
         });
+  // To prevent repeat API calls with same filters as last call's
+  const lastUsedSelectedFilters = ref<Record<string, string[]>>();
+  // This is a workaround for the map to re-render when filters change. Value doesn't matter.
+  const flipToReloadMap = ref(false);
+  
+  // For table view
+  const paginationState = ref<Record<string, number>>({
+    userRequestedMaximumItems: 0,
+    itemsPerPage: 20,
+    currentPage: 0
+  });
 
-  const currentPage = ref(0);
-  const itemsPerPage = ref(20);
+  // For map view
+  const timeState = ref<Record<string, number>>({
+    startYear: 1960,
+    endYear: new Date().getFullYear(),
+    timeWindow: 500,
+    currentYear: 1960,
+  });
 
   // Define the fields we want to display/filter
   const fields: FieldDefinition[] = [
@@ -80,89 +103,88 @@ export function useFolkloreCollections() {
       key: "location_collected",
       label: "Location Collected",
       path: "location_collected.city", // or a custom approach
+      filterable: true,
+    },
+    {
+      key: "place_mentioned",
+      label: "City Mentioned",
+      path: "folklore.place_mentioned.city",
+      filterable: true,
+      hidden: true,
     },
   ];
 
   // -----------------------------------
-  // Fetching Data
+  // Fetching Filtered Data
   // -----------------------------------
-  async function fetchCollections() {
+  async function fetchInitialCollections() {
     try {
-      let path = "/api/folklore/";
-      const response = await fetch(path);
-      if (!response.ok) throw new Error("Failed to fetch data");
-      collections.value = await response.json();
-      currentPage.value = 0; // reset to first page
+      const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
+      const numEntriesResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/count?filters=${filtersJson}`);
+      if (!numEntriesResponse.ok) throw new Error("Failed to fetch data");
+      const numEntries = await numEntriesResponse.json();
+      collections.value = new Array(numEntries).fill(null);
+
+      // Load first five pages of data
+      for (let page = 1; page <= 5; page++) {
+        const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/paginated?page=${page}&page_size=20&filters=${filtersJson}`);
+        if (!dataResponse.ok) throw new Error("Failed to fetch data");
+        const data = await dataResponse.json();
+        const startIndex = (page - 1) * 20;
+        const endIndex = Math.min(startIndex + data.length, numEntries);
+        data.forEach((entry: FolkloreCollection, index: number) => {
+          const targetIndex = startIndex + index;
+          if (targetIndex < endIndex) {
+            collections.value[targetIndex] = entry;
+          } else {
+            return;
+          }
+        });
+      }
+      
+      paginationState.value.currentPage = 0; // Set to first page
+      paginationState.value.userRequestedMaximumItems = collections.value.length;
+      lastUsedSelectedFilters.value = JSON.parse(JSON.stringify(selectedFilters.value)); // deepcopy
+      isRandomCollection.value = false;
     } catch (err) {
       console.error(err);
     }
   }
 
+  async function fetchFilteredMapData() {
+    const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
+    const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/?filters=${filtersJson}`);
+    if (!dataResponse.ok) throw new Error("Failed to fetch data");
+    return await dataResponse.json();
+}
+
+  async function fetchRandom() {
+    const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
+    const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/random?filters=${filtersJson}`);
+    if (!dataResponse.ok) throw new Error("Failed to fetch data");
+    const data = await dataResponse.json();
+    randomCollections.value = data;
+    paginationState.value.currentPage = 0; // reset to first page
+    isRandomCollection.value = true;
+  }
+
   // -----------------------------------
   // Filtering Logic
   // -----------------------------------
-  // 1) Identify unique options for each filterable field
-  const uniqueOptions = computed(() => {
-    // Build an object: { fieldKey: Set<string> }
-    const result: Record<string, Set<string>> = {};
 
-    // Initialize sets for each filterable field
-    fields
-      .filter((f) => f.filterable)
-      .forEach((f) => {
-        result[f.key] = new Set();
-      });
-
-    // Populate sets by reading the path on each collection
-    collections.value.forEach((col) => {
-      fields
-        .filter((f) => f.filterable)
-        .forEach((f) => {
-          const val = getNestedValue(col, f.path);
-          if (val) {
-            result[f.key].add(String(val));
-          }
-        });
-    });
-
-    // Convert each set to a sorted array
-    const final: Record<string, string[]> = {};
-    for (const key of Object.keys(result)) {
-      final[key] = Array.from(result[key]).sort();
-    }
-    return final;
-  });
-
-  // 2) Apply filters: For each field, if selectedFilters[field].length > 0,
-  //    we only keep items matching that field's value.
-  const filteredCollections = computed(() => {
-    return collections.value.filter((col) => {
-      let matchesAll = true;
-      // Check each filterable field's selections
-      for (const f of fields.filter((x) => x.filterable)) {
-        const filterValues = selectedFilters.value[f.key] || [];
-        if (filterValues.length === 0) continue; // no filter for this field
-
-        const val = getNestedValue(col, f.path);
-        if (!val || !filterValues.includes(String(val))) {
-          matchesAll = false;
-          break;
-        }
-      }
-      return matchesAll;
-    });
-  });
-
-  // 3) Paginated result
+  // Paginated result
   const paginatedCollections = computed(() => {
-    const startIndex = currentPage.value * itemsPerPage.value;
-    const endIndex = startIndex + itemsPerPage.value;
-    return filteredCollections.value.slice(startIndex, endIndex);
+    const startIndex = paginationState.value.currentPage * paginationState.value.itemsPerPage;
+    const endIndex = startIndex + paginationState.value.itemsPerPage;
+    const relevant_collections = isRandomCollection.value ? randomCollections.value : collections.value;
+    return relevant_collections.slice(0, paginationState.value.userRequestedMaximumItems).slice(startIndex, endIndex);
   });
 
-  // 4) Total pages
+  // Total pages
   const totalPages = computed(() => {
-    return Math.ceil(filteredCollections.value.length / itemsPerPage.value);
+    const relevant_collections = isRandomCollection.value ? randomCollections.value : collections.value;
+    let entriesLength = Math.min(relevant_collections.length, paginationState.value.userRequestedMaximumItems);
+    return Math.ceil(entriesLength / paginationState.value.itemsPerPage);
   });
 
   // -----------------------------------
@@ -173,18 +195,45 @@ export function useFolkloreCollections() {
     return path.split(".").reduce((acc, part) => acc?.[part], obj);
   }
 
-  function goToPage(pageIndex: number) {
-    currentPage.value = pageIndex;
+  // Transition to a new page and fetch data if necessary
+  async function goToPage(pageIndex: number) {
+    paginationState.value.currentPage = pageIndex;
+    if (collections.value[pageIndex * paginationState.value.itemsPerPage] == null) {
+      const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
+      const path = `${import.meta.env.VITE_BACKEND_API}/folklore/paginated?page=${pageIndex}&page_size=${paginationState.value.itemsPerPage}&filters=${filtersJson}`;
+      const dataResponse = await fetch(path);
+      if (!dataResponse.ok) throw new Error("Failed to fetch data");
+      const data = await dataResponse.json();
+      data.forEach((entry: FolkloreCollection, index: number) => {
+        let i : number = pageIndex * paginationState.value.itemsPerPage + index;
+        if (i >= collections.value.length) {
+          return;
+        }
+        collections.value[i] = entry;
+      });
+    }
   }
 
-  // Reset page when filters change
-  watch(
-    selectedFilters,
-    () => {
-      currentPage.value = 0;
-    },
-    { deep: true }
-  );
+  async function populateUniqueOptions() {
+    if (Object.keys(uniqueOptions.value).length != 0) {
+      return;
+    }
+    let field_to_path_dict : Record<string, string> = {};
+    fields.forEach((field_info) => {
+      if (field_info.filterable) {
+        field_to_path_dict[field_info.key] = field_info.path;
+      }
+    });
+    const field_to_path_str = encodeURIComponent(JSON.stringify(field_to_path_dict));
+    const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/filters?field_to_path=${field_to_path_str}`);
+    if (!dataResponse.ok) throw new Error("Failed to fetch filters");
+    const endpointResult = await dataResponse.json();
+    const final: Record<string, string[]> = {};
+    for (const key of Object.keys(endpointResult)) {
+      final[key] = endpointResult[key].sort();
+    }
+    uniqueOptions.value = final;
+  }
 
   // -----------------------------------
   // Return from composable
@@ -192,20 +241,26 @@ export function useFolkloreCollections() {
   return {
     // Data
     collections,
+    randomCollections,
+    isRandomCollection,
     fields,
     selectedFilters,
+    lastUsedSelectedFilters,
+    paginationState,
+    timeState,
     uniqueOptions,
-    currentPage,
-    itemsPerPage,
+    isTableView,
+    flipToReloadMap,
 
     // Computed
-    filteredCollections,
     paginatedCollections,
     totalPages,
 
     // Methods
-    fetchCollections,
+    fetchInitialCollections,
+    fetchRandom,
+    fetchFilteredMapData,
     goToPage,
-    getNestedValue,
+    populateUniqueOptions,
   };
 }
