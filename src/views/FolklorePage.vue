@@ -12,17 +12,6 @@
       <div class="filter-section" v-if="isTableView">
         <h3>Pagination</h3>
         <label>
-              Maximum items
-              <input
-                type="number"
-                min="1"
-                v-model="paginationState.userRequestedMaximumItems"
-                :max="collections.length"
-                style="width: 3rem;"
-              />
-        </label>
-        <br>
-        <label>
               Items per page
               <input
                 type="number"
@@ -70,18 +59,7 @@
         </label>
         <br>
         <label>
-              Display Start Year
-              <input
-                type="number"
-                :min="timeState.startYear"
-                :max="timeState.endYear - timeState.timeWindow"
-                v-model="timeState.currentYear"
-                style="width: 4rem;"
-              />
-        </label>
-        <br>
-        <label>
-              Window Duration (years)
+              Window Size (years)
               <input
                 type="number"
                 min="1"
@@ -120,6 +98,15 @@
             </label>
           </li>
         </ul>
+      </div>
+      <div class="filter-section">
+        <h3 class="filter-header">Text Search</h3>
+        <span class="expand-collapse-btn" v-if="isFieldExpand['search-text']" @click="isFieldExpand['search-text'] = false">[-]</span>
+        <span class="expand-collapse-btn" v-else @click="isFieldExpand['search-text'] = true">[+]</span>
+        <div v-if="isFieldExpand['search-text']">
+          <span>Includes: </span>
+          <input type="text" v-model="selectedFilters['cleaned_full_text']"/>
+        </div>
       </div>
       
       <div class="filter-section">
@@ -237,7 +224,10 @@ export default defineComponent({
     const isLoading = ref(true);
 
     // Tracks expand / collapse state for field filters
-    const isFieldExpand = ref<Record<string, boolean>>({});
+    const isFieldExpand = ref<Record<string, boolean>>({
+      "search-text": true,
+    });
+    
     fields.forEach((field) => {
       if (field.filterable) {
         isFieldExpand.value[field.key] = true;
@@ -278,7 +268,6 @@ export default defineComponent({
     }
 
     function resetUserPagination() {
-      paginationState.value.userRequestedMaximumItems = collections.value.length;
       paginationState.value.itemsPerPage = 20;
       paginationState.value.currentPage = 0;
     }
@@ -302,6 +291,7 @@ export default defineComponent({
           "folklore.language_of_origin": [],
           "location_collected.city": [],
           "folklore.place_mentioned.city": [],
+          "cleaned_full_text": "",
         };
     }
 
