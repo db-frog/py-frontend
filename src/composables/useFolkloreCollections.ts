@@ -1,5 +1,6 @@
 import { ref, computed, watch } from "vue";
 import type { FolkloreCollection } from "@/types";
+import type { PaginationState } from "./usePagination.ts"
 
 /**
  * A field definition to indicate:
@@ -42,7 +43,7 @@ export function useFolkloreCollections() {
   const flipToReloadMap = ref(false);
   
   // For table view
-  const paginationState = ref<Record<string, number>>({
+  const paginationState = ref<PaginationState>({
     itemsPerPage: 20,
     currentPage: 0
   });

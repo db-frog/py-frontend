@@ -1,25 +1,20 @@
-<!-- src/App.vue -->
-<template>
-  <FolklorePage />
-</template>
+<script lang="ts" setup>
+import { computed, onMounted } from 'vue';
+import FolklorePage from '@/views/FolklorePage.vue';
+import Callback from './components/Callback.vue';
+import { useOidc } from './composables/useOidc';
 
-<script lang="ts">
-import { defineComponent } from "vue";
-import FolklorePage from "@/views/FolklorePage.vue";
+const isCallback = computed(() => window.location.pathname === '/callback');
+const { loadUser } = useOidc();
 
-export default defineComponent({
-  name: "App",
-  components: {
-    FolklorePage,
-  },
+onMounted(() => {
+  if (!isCallback.value) loadUser();
 });
 </script>
 
-<style>
-/* Optional global styles */
-html, body {
-  margin: 0;
-  padding: 0;
-  font-family: sans-serif;
-}
-</style>
+<template>
+  <Callback v-if="isCallback" />
+  <div>
+    <FolklorePage />
+  </div>
+</template>
