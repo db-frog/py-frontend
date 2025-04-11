@@ -1,5 +1,6 @@
 import { ref, computed, watch } from "vue";
 import type { FolkloreCollection } from "@/types";
+import type {PaginationState} from "@/composables/usePagination.ts";
 
 /**
  * A field definition to indicate:
@@ -41,10 +42,10 @@ export function useFolkloreCollections() {
   const flipToReloadMap = ref(false);
   
   // For table view
-  const paginationState = ref<Record<string, number>>({
-    userRequestedMaximumItems: 0,
+  const paginationState = ref<PaginationState>({
+    currentPage: 0,
     itemsPerPage: 20,
-    currentPage: 0
+    userRequestedMaximumItems: 0
   });
 
   // For map view

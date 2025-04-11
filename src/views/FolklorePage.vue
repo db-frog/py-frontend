@@ -5,7 +5,7 @@
         <img class="h-22 w-auto" src="../assets/bfa.svg" alt="">
       </div>
       <div class="flex lg:flex-1 lg:justify-end">
-        <AuthButton>Log in <span aria-hidden="true">&rarr;</span></AuthButton>
+        <AuthButton />
       </div>
     </nav>
   </header>
@@ -252,7 +252,7 @@ export default defineComponent({
 
     const isLoading = ref(true);
     const showModal = ref(false);
-    const selectedRow = ref(null);
+    const selectedRow = ref(undefined);
 
     // Computed array for filterable fields
     const filterableFields = computed(() => fields.filter((f) => f.filterable));
@@ -263,7 +263,7 @@ export default defineComponent({
     }
     function closeModal() {
       showModal.value = false;
-      selectedRow.value = null;
+      selectedRow.value = undefined;
     }
 
     // Handle fetching collections:
@@ -381,7 +381,6 @@ export default defineComponent({
       flipToReloadMap,
       handleFetchCollections,
       handleFetchRandom: useHandleFetchRandom(isLoading, fetchRandom),
-      resetUserTime,
       undoRandom,
       clearFilters,
       showModal,

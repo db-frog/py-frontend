@@ -1,7 +1,7 @@
 import { computed } from "vue";
 import type { Ref } from "vue";
 
-interface PaginationState {
+export interface PaginationState {
   currentPage: number;
   itemsPerPage: number;
   userRequestedMaximumItems: number;

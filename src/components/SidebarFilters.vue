@@ -3,9 +3,6 @@
     <div class="filters-container">
       <slot name="filters"></slot>
     </div>
-    <div class="login-container">
-      <AuthButton />
-    </div>
   </div>
 </template>
 
