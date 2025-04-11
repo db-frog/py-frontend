@@ -45,7 +45,7 @@
             />
           </label>
           <br />
-          <button @click="resetUserPagination">Reset</button>
+          <button @click="resetUserPagination" class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2">Reset</button>
         </SidebarFilter>
         <SidebarFilter v-else label="Timeline Configuration" :collapsible="false">
           <label>
@@ -88,6 +88,7 @@
           :key="field.key"
           :label="field.label"
           :collapsible="true"
+          :defaultExpanded="false"
         >
           <ul>
             <li v-for="(option, index) in uniqueOptions[field.key]" :key="option + index">
@@ -99,9 +100,9 @@
           </ul>
         </SidebarFilter>
 
-        <SidebarFilter :collapsible="true" label="Text Search">
+        <SidebarFilter :collapsible="true" label="Text Search" :default-expanded="false">
           <span>Includes: </span>
-          <input type="text" v-model="selectedFilters['cleaned_full_text']">
+          <input type="text" v-model="selectedFilters['cleaned_full_text']" class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md">
         </SidebarFilter>
 
                 <!-- Filters Section -->
