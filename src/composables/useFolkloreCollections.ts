@@ -229,7 +229,7 @@ export function useFolkloreCollections() {
     const endpointResult = await dataResponse.json();
     const final: Record<string, string[]> = {};
     for (const key of Object.keys(endpointResult)) {
-      final[key] = endpointResult[key].sort();
+      final[key] = Array.from(new Set<string>(endpointResult[key])).sort();
     }
     uniqueOptions.value = final;
   }
