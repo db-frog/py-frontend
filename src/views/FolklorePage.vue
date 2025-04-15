@@ -14,17 +14,6 @@
         <!-- Pagination or Map Timeline Section -->
         <SidebarFilter v-if="isTableView" label="Pagination" :collapsible="false">
           <label>
-            Maximum items:
-            <input
-              type="number"
-              min="1"
-              class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md"
-              v-model="paginationState.userRequestedMaximumItems"
-              :max="collections.length"
-            />
-          </label>
-          <br />
-          <label>
             Items per page:
             <input
               type="number"
@@ -46,6 +35,7 @@
             />
           </label>
           <br />
+          <button @click="resetUserPagination" class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2">Reset</button>
         </SidebarFilter>
         <SidebarFilter v-else label="Timeline Configuration" :collapsible="false">
           <label>
@@ -71,17 +61,6 @@
           </label>
           <br />
           <label>
-            Display Start Year:
-            <input
-              type="number"
-              :min="timeState.startYear"
-              :max="timeState.endYear - timeState.timeWindow"
-              v-model="timeState.currentYear"
-              class="bg-gray-50 border-x-0 border-gray-300 text-center text-gray-900 text-sm"
-            />
-          </label>
-          <br />
-          <label>
             Time Window (years):
             <input
               type="number"
@@ -94,6 +73,11 @@
         </SidebarFilter>
 
         <!-- Filters Section -->
+        <SidebarFilter :collapsible="true" label="Text Search" :default-expanded="false">
+          <span>Includes: </span>
+          <input type="text" v-model="selectedFilters['cleaned_full_text']" class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md">
+        </SidebarFilter>
+
         <SidebarFilter label="Filters" :collapsible="false">
           <button @click="handleFetchCollections"
           class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
@@ -109,6 +93,7 @@
           :key="field.key"
           :label="field.label"
           :collapsible="true"
+          :defaultExpanded="false"
         >
           <ul>
             <li v-for="(option, index) in uniqueOptions[field.key]" :key="option + index">
@@ -205,6 +190,10 @@ import SidebarFilter from "@/components/SidebarFilter.vue";
 import {
   useHandleFetchRandom,
   useGoToPageIndex,
+  useClearFilters,
+  useUndoRandom,
+  useResetUserPagination,
+  useHandleFetchCollections,
 } from "@/composables/useFolkloreUtils";
 import { usePagination } from "@/composables/usePagination";
 import Header from "@/components/Header.vue";
@@ -256,41 +245,11 @@ export default defineComponent({
       selectedRow.value = undefined;
     }
 
-    // Handle fetching collections:
-    // • If in table view, fetch paginated data.
-    // • Otherwise (map view), toggle a reload flag.
-    async function handleFetchCollections() {
-      if (JSON.stringify(lastUsedSelectedFilters.value) === JSON.stringify(selectedFilters.value)) {
-        return;
-      }
-      isLoading.value = true;
-      if (isTableView.value) {
-        await fetchInitialCollections();
-      }
-      flipToReloadMap.value = !flipToReloadMap.value;
-      isLoading.value = false;
-    }
-
     function resetUserTime() {
       timeState.value.startYear = 1960;
       timeState.value.endYear = new Date().getFullYear();
       timeState.value.timeWindow = 10;
       timeState.value.currentYear = 1960;
-    }
-
-    function undoRandom() {
-      isLoading.value = true;
-      isRandomCollection.value = false;
-      isLoading.value = false;
-    }
-
-    function clearFilters() {
-      selectedFilters.value = {
-        "folklore.genre": [],
-        "folklore.language_of_origin": [],
-        "location_collected.city": [],
-        "folklore.place_mentioned.city": [],
-      };
     }
 
     const goToPageIndex = useGoToPageIndex(isLoading, goToPage);
@@ -369,10 +328,11 @@ export default defineComponent({
       fetchInitialCollections,
       fetchFilteredMapData,
       flipToReloadMap,
-      handleFetchCollections,
+      handleFetchCollections: useHandleFetchCollections(selectedFilters, lastUsedSelectedFilters, isLoading, isTableView, flipToReloadMap, fetchInitialCollections),
       handleFetchRandom: useHandleFetchRandom(isLoading, fetchRandom),
-      undoRandom,
-      clearFilters,
+      resetUserPagination: useResetUserPagination(paginationState),
+      undoRandom: useUndoRandom(isLoading, isRandomCollection),
+      clearFilters: useClearFilters(selectedFilters),
       showModal,
       selectedRow,
       openModal,

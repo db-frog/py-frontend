@@ -4,7 +4,6 @@ import type { Ref } from "vue";
 export interface PaginationState {
   currentPage: number;
   itemsPerPage: number;
-  userRequestedMaximumItems: number;
 }
 
 export function usePagination(

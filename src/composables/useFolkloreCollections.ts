@@ -2,6 +2,7 @@ import { ref, computed, watch } from "vue";
 import type { FolkloreCollection } from "@/types";
 import type { PaginationState } from "@/composables/usePagination.ts";
 import { useOidc } from "@/composables/useOidc.ts";
+
 /**
  * A field definition to indicate:
  *  - key: unique identifier for the field (e.g. "genre", "language_of_origin")
@@ -35,6 +36,7 @@ export function useFolkloreCollections() {
       if (response.ok) {
         return response;
       } else {
+        // If we receive an access forbidden response, redirect to sign out
         if (response.status === 401)
           console.log("Signed out due to inactivity")
           signOut()
@@ -54,23 +56,23 @@ export function useFolkloreCollections() {
 
   // We'll store filters in an object: { fieldKey: string[] }
   // E.g.: { genre: ['Legend', 'Myth'], language_of_origin: ['Spanish'] }
-  const selectedFilters = ref<Record<string, string[]>>({
+  const selectedFilters = ref<Record<string, string[] | string>>({
           "folklore.genre": [],
           "folklore.language_of_origin": [],
           "location_collected.city": [],
           "folklore.place_mentioned.city": [],
           // add other filterable fields here as needed
+          "cleaned_full_text": "",
         });
   // To prevent repeat API calls with same filters as last call's
-  const lastUsedSelectedFilters = ref<Record<string, string[]>>();
+  const lastUsedSelectedFilters = ref<Record<string, string[] | string>>();
   // This is a workaround for the map to re-render when filters change. Value doesn't matter.
   const flipToReloadMap = ref(false);
   
   // For table view
   const paginationState = ref<PaginationState>({
     currentPage: 0,
-    itemsPerPage: 20,
-    userRequestedMaximumItems: 0
+    itemsPerPage: 20
   });
 
   // For map view
@@ -173,7 +175,6 @@ export function useFolkloreCollections() {
       }
       
       paginationState.value.currentPage = 0; // Set to first page
-      paginationState.value.userRequestedMaximumItems = collections.value.length;
       lastUsedSelectedFilters.value = JSON.parse(JSON.stringify(selectedFilters.value)); // deepcopy
       isRandomCollection.value = false;
     } catch (err) {
@@ -209,14 +210,13 @@ export function useFolkloreCollections() {
     const startIndex = paginationState.value.currentPage * paginationState.value.itemsPerPage;
     const endIndex = startIndex + paginationState.value.itemsPerPage;
     const relevant_collections = isRandomCollection.value ? randomCollections.value : collections.value;
-    return relevant_collections.slice(0, paginationState.value.userRequestedMaximumItems).slice(startIndex, endIndex);
+    return relevant_collections.slice(startIndex, endIndex);
   });
 
   // Total pages
   const totalPages = computed(() => {
     const relevant_collections = isRandomCollection.value ? randomCollections.value : collections.value;
-    let entriesLength = Math.min(relevant_collections.length, paginationState.value.userRequestedMaximumItems);
-    return Math.ceil(entriesLength / paginationState.value.itemsPerPage);
+    return Math.ceil(relevant_collections.length / paginationState.value.itemsPerPage);
   });
 
   // -----------------------------------
@@ -263,7 +263,7 @@ export function useFolkloreCollections() {
     const endpointResult = await dataResponse.json();
     const final: Record<string, string[]> = {};
     for (const key of Object.keys(endpointResult)) {
-      final[key] = endpointResult[key].sort();
+      final[key] = Array.from(new Set<string>(endpointResult[key])).sort();
     }
     uniqueOptions.value = final;
   }

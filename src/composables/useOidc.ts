@@ -36,7 +36,12 @@ export function useOidc() {
     }
   }
 
-  // The login flow redirects to your backend.
+  // The callback redirects to the backend.
+  function callback() {
+    window.location.href = '/api/auth/callback';
+  }
+
+  // The login flow redirects to the backend.
   function signIn() {
     window.location.href = '/api/auth/login';
   }
@@ -55,5 +60,6 @@ export function useOidc() {
     loadUser,
     signIn,
     signOut,
+    callback,
   };
 }

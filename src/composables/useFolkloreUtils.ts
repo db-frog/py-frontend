@@ -15,9 +15,13 @@ export function useHandleFetchCollections(
   selectedFilters: Ref<any>,
   lastUsedSelectedFilters: Ref<any>,
   isLoading: Ref<boolean>,
+  isTableView: Ref<boolean>,
+  flipToReloadMap: Ref<boolean>,
   fetchInitialCollections: () => Promise<void>,
-  paginationState: Ref<any>
 ) {
+  // Handle fetching collections:
+  // • If in table view, fetch paginated data.
+  // • Otherwise (map view), toggle a reload flag.
   return async function handleFetchCollections() {
     if (
       JSON.stringify(lastUsedSelectedFilters.value) ===
@@ -26,18 +30,18 @@ export function useHandleFetchCollections(
       return;
     }
     isLoading.value = true;
-    await fetchInitialCollections();
-    paginationState.value.currentPage = 0;
+    if (isTableView.value) {
+      await fetchInitialCollections();
+    }
+    flipToReloadMap.value = !flipToReloadMap.value;
     isLoading.value = false;
   };
 }
 
 export function useResetUserPagination(
-  collections: Ref<any[]>,
   paginationState: Ref<any>
 ) {
   return function resetUserPagination() {
-    paginationState.value.userRequestedMaximumItems = collections.value.length;
     paginationState.value.itemsPerPage = 20;
     paginationState.value.currentPage = 0;
   };
@@ -61,6 +65,7 @@ export function useClearFilters(selectedFilters: Ref<any>) {
       "folklore.language_of_origin": [],
       "location_collected.city": [],
       "folklore.place_mentioned.city": [],
+      "cleaned_full_text": "",
     };
   };
 }
