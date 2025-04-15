@@ -61,7 +61,7 @@ export function useFolkloreCollections() {
           "folklore.language_of_origin": [],
           "location_collected.city": [],
           "folklore.place_mentioned.city": [],
-          // add other filterable fields here as needed
+          // aqdd other filterable fields here as needed
           "cleaned_full_text": "",
         });
   // To prevent repeat API calls with same filters as last call's
