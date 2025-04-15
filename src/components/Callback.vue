@@ -6,11 +6,11 @@
 import { onMounted } from 'vue';
 import { useOidc } from '@/composables/useOidc';
 
-// This component is rendered only when window.location.pathname === '/callback'
-const { handleCallback } = useOidc();
+// This is rendered only when window.location.pathname === '/callback'
+const { loadUser } = useOidc();
 
 onMounted(async () => {
-  await handleCallback();
+  await loadUser();
   // After processing the callback, remove the "/callback" path from the URL
   window.history.replaceState({}, document.title, window.location.origin);
   window.location.href = window.location.origin;

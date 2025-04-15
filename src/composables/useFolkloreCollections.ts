@@ -1,7 +1,7 @@
 import { ref, computed, watch } from "vue";
 import type { FolkloreCollection } from "@/types";
-import type {PaginationState} from "@/composables/usePagination.ts";
-
+import type { PaginationState } from "@/composables/usePagination.ts";
+import { useOidc } from "@/composables/useOidc.ts";
 /**
  * A field definition to indicate:
  *  - key: unique identifier for the field (e.g. "genre", "language_of_origin")
@@ -18,6 +18,31 @@ export interface FieldDefinition {
 }
 
 export function useFolkloreCollections() {
+  // -----------------------------------
+  // User/Authentication Integration
+  // -----------------------------------
+  // Import the user info from your useOidc composable
+  const { signOut } = useOidc();
+
+  // Encodes the filters object as a URL-encoded JSON string.
+  const encodeFilters = (filters: Record<string, any>): string => {
+    return encodeURIComponent(JSON.stringify(filters));
+  };
+
+  // Fetch helper ensuring cookies are included.
+  const fetchWithAuth = (url: string, init: RequestInit = {}): Promise<Response> => {
+    return fetch(url, {...init, credentials: 'include'}).then(function (response) {
+      if (response.ok) {
+        return response;
+      } else {
+        if (response.status === 401)
+          console.log("Signed out due to inactivity")
+          signOut()
+          return response;
+      }
+    })
+  };
+
   // -----------------------------------
   // Reactive State
   // -----------------------------------
@@ -120,15 +145,19 @@ export function useFolkloreCollections() {
   // -----------------------------------
   async function fetchInitialCollections() {
     try {
-      const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
-      const numEntriesResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/count?filters=${filtersJson}`);
+      const filtersJson = encodeFilters(selectedFilters.value);
+      const countUrl = `${import.meta.env.VITE_BACKEND_API}/folklore/count?filters=${filtersJson}`;
+
+      const numEntriesResponse = await fetchWithAuth(countUrl);
+
       if (!numEntriesResponse.ok) throw new Error("Failed to fetch data");
       const numEntries = await numEntriesResponse.json();
       collections.value = new Array(numEntries).fill(null);
 
       // Load first five pages of data
       for (let page = 1; page <= 5; page++) {
-        const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/paginated?page=${page}&page_size=20&filters=${filtersJson}`);
+        const pageUrl = `${import.meta.env.VITE_BACKEND_API}/folklore/paginated?page=${page}&page_size=20&filters=${filtersJson}`;
+        const dataResponse = await fetchWithAuth(pageUrl);
         if (!dataResponse.ok) throw new Error("Failed to fetch data");
         const data = await dataResponse.json();
         const startIndex = (page - 1) * 20;
@@ -153,15 +182,17 @@ export function useFolkloreCollections() {
   }
 
   async function fetchFilteredMapData() {
-    const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
-    const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/?filters=${filtersJson}`);
+    const filtersJson = encodeFilters(selectedFilters.value);
+    const url = `${import.meta.env.VITE_BACKEND_API}/folklore/?filters=${filtersJson}`;
+    const dataResponse = await fetchWithAuth(url);
     if (!dataResponse.ok) throw new Error("Failed to fetch data");
     return await dataResponse.json();
 }
 
   async function fetchRandom() {
-    const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
-    const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/random?filters=${filtersJson}`);
+    const filtersJson = encodeFilters(selectedFilters.value);
+    const url = `${import.meta.env.VITE_BACKEND_API}/folklore/random?filters=${filtersJson}`;
+    const dataResponse = await fetchWithAuth(url);
     if (!dataResponse.ok) throw new Error("Failed to fetch data");
     const data = await dataResponse.json();
     randomCollections.value = data;
@@ -200,9 +231,9 @@ export function useFolkloreCollections() {
   async function goToPage(pageIndex: number) {
     paginationState.value.currentPage = pageIndex;
     if (collections.value[pageIndex * paginationState.value.itemsPerPage] == null) {
-      const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
-      const path = `${import.meta.env.VITE_BACKEND_API}/folklore/paginated?page=${pageIndex}&page_size=${paginationState.value.itemsPerPage}&filters=${filtersJson}`;
-      const dataResponse = await fetch(path);
+      const filtersJson = encodeFilters(selectedFilters.value);
+      const url = `${import.meta.env.VITE_BACKEND_API}/folklore/paginated?page=${pageIndex}&page_size=${paginationState.value.itemsPerPage}&filters=${filtersJson}`;
+      const dataResponse = await fetchWithAuth(url);
       if (!dataResponse.ok) throw new Error("Failed to fetch data");
       const data = await dataResponse.json();
       data.forEach((entry: FolkloreCollection, index: number) => {
@@ -226,7 +257,8 @@ export function useFolkloreCollections() {
       }
     });
     const field_to_path_str = encodeURIComponent(JSON.stringify(field_to_path_dict));
-    const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/filters?field_to_path=${field_to_path_str}`);
+    const url = `${import.meta.env.VITE_BACKEND_API}/folklore/filters?field_to_path=${field_to_path_str}`;
+    const dataResponse = await fetchWithAuth(url);
     if (!dataResponse.ok) throw new Error("Failed to fetch filters");
     const endpointResult = await dataResponse.json();
     const final: Record<string, string[]> = {};

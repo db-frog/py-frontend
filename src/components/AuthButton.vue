@@ -8,12 +8,11 @@ export default defineComponent({
     const { signIn, signOut, isAuthenticated, currentUser, loadUser } = useOidc();
 
     const login = async () => {
-      await signIn();
+      signIn();
     };
 
     const logout = async () => {
-      await signOut();
-      window.location.href = window.location.origin;
+      signOut();
     };
 
     onMounted(() => {

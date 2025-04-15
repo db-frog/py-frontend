@@ -1,15 +1,5 @@
 <template>
-  <header class="bg-white">
-    <nav class="mx-auto flex max-w-7xl items-center justify-between p-6 lg:px-8" aria-label="Global">
-      <div class="flex lg:flex-1">
-        <img class="h-22 w-auto" src="../assets/bfa.svg" alt="">
-      </div>
-      <div class="flex lg:flex-1 lg:justify-end">
-        <AuthButton />
-      </div>
-    </nav>
-  </header>
-
+  <Header />
   <div class="page-container">
     <SidebarFilters>
       <template #filters>
@@ -217,12 +207,12 @@ import {
   useGoToPageIndex,
 } from "@/composables/useFolkloreUtils";
 import { usePagination } from "@/composables/usePagination";
-import AuthButton from "@/components/AuthButton.vue";
+import Header from "@/components/Header.vue";
 
 export default defineComponent({
   name: "FolklorePage",
   components: {
-    AuthButton,
+    Header,
     DynamicTable,
     DynamicMap,
     FolkloreModal,
