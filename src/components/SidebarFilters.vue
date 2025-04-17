@@ -29,7 +29,7 @@ export default defineComponent({
 .desktop-filters {
   display: block;
   width: 250px;
-  height: 700px;
+  height: 80vh;
   overflow-y: auto;
 }
 </style>

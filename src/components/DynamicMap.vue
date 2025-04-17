@@ -32,7 +32,7 @@ export default defineComponent({
       type: Object as PropType<Record<string, number>>,
       default: ref<Record<string, number>>({
         currentYear: 1960,
-        timeWindow: 500,
+        timeWindow: 10,
         startYear: 1960,
         endYear: 9999,
       }),

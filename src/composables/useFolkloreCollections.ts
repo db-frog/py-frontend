@@ -18,6 +18,9 @@ export interface FieldDefinition {
   hidden?: boolean;
 }
 
+const showFilters = ref(false);
+const showModal   = ref(false);
+
 export function useFolkloreCollections() {
   // -----------------------------------
   // User/Authentication Integration
@@ -79,30 +82,15 @@ export function useFolkloreCollections() {
   const timeState = ref<Record<string, number>>({
     startYear: 1960,
     endYear: new Date().getFullYear(),
-    timeWindow: 500,
+    timeWindow: 10,
     currentYear: 1960,
   });
 
   // Define the fields we want to display/filter
   const fields: FieldDefinition[] = [
     {
-      key: "contributor_name",
-      label: "Contributor Name",
-      path: "contributor.name",
-    },
-    {
-      key: "age_bucket",
-      label: "Contributor Age",
-      path: "contributor.age_bucket",
-    },
-    {
-      key: "gender",
-      label: "Contributor Gender",
-      path: "contributor.gender",
-    },
-    {
       key: "item",
-      label: "Folklore Item",
+      label: "Item of Folklore",
       path: "folklore.item",
     },
     {
@@ -116,11 +104,6 @@ export function useFolkloreCollections() {
       label: "Language of Origin",
       path: "folklore.language_of_origin",
       filterable: true,
-    },
-    {
-      key: "collector_name",
-      label: "Collector Name",
-      path: "collector.name",
     },
     {
       key: "date_collected",

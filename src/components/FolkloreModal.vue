@@ -2,19 +2,11 @@
   <transition name="fade">
     <div class="modal-backdrop" v-if="collection" @click="onClose">
       <div class="modal-content" @click.stop>
-        <h2>Folklore Details</h2>
-        <p>
-          <strong>Date Collected:</strong>
-          {{ collection ? formatDate(collection.date_collected) : '' }}
-        </p>
-        <p>
-          <strong>Location Collected:</strong>
-          {{ collection ? formatLocation(collection.location_collected) : '' }}
-        </p>
+        <h2>Folklore Details:</h2>
         <p><strong>Contributor Name:</strong> {{ collection?.contributor.name }}</p>
         <p><strong>Age:</strong> {{ collection?.contributor.age_bucket }}</p>
         <p><strong>Gender:</strong> {{ collection?.contributor.gender || 'N/A' }}</p>
-        <p><strong>Folklore Item:</strong> {{ collection?.folklore.item }}</p>
+        <p><strong>Item of Folklore:</strong> {{ collection?.folklore.item }}</p>
         <p><strong>Genre:</strong> {{ collection?.folklore.genre }}</p>
         <p><strong>Language of Origin:</strong> {{ collection?.folklore.language_of_origin || 'N/A' }}</p>
         <p><strong>Places Mentioned:</strong>
@@ -24,18 +16,22 @@
             <span v-if="idx < (collection?.folklore.place_mentioned.length || 1) - 1">, </span>
           </span>
         </p>
-        <p><strong>Full Text:</strong> {{ collection?.cleaned_full_text }}</p>
 
-        <h2>Collector's Analysis</h2>
+        <h2>Collection Information: </h2>
         <p><strong>Collector Name:</strong> {{ collection?.collector.name }}</p>
-        <p><strong>Interpretation:</strong> {{ collection?.analysis.interpretation || 'N/A' }}</p>
+        <p>
+          <strong>Date Collected:</strong>
+          {{ collection ? formatDate(collection.date_collected) : '' }}
+        </p>
+        <p>
+          <strong>Location Collected:</strong>
+          {{ collection ? formatLocation(collection.location_collected) : '' }}
+        </p>
         <p><strong>Collector Comments:</strong> {{ collection?.analysis.collector_comments || 'N/A' }}</p>
-        <p><strong>Use Context:</strong> {{ collection?.analysis.context.use_context || 'N/A' }}</p>
-        <p><strong>Cultural Background:</strong> {{ collection?.analysis.context.cultural_background || 'N/A' }}</p>
         <p><strong>Collection Context:</strong> {{ collection?.analysis.context.collection_context || 'N/A' }}</p>
 
-        <a class="close-btn" @click="onClose">Close</a>
-        <a class="download"
+        <a class="modal-btn close" @click="onClose">Close</a>
+        <a class="modal-btn download"
            target="_blank" rel="noopener noreferrer"
            :href="`${api}/folklore/${collection._id}/download`"
            @click.stop>
@@ -108,36 +104,26 @@ export default defineComponent({
   color: #000;
 }
 
+.modal-content h2 {
+  color: var(--color-primary-yellow);
+}
+
+.modal-btn {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  background-color: var(--color-primary-yellow);
+  color: var(--color-secondary-darknavy);
+  border: 2px solid var(--color-primary-blue);
+  border-radius: 3px;
+}
+
 .download {
-  margin-top: 1rem;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
   float: right;
-  background-color: var(--color-primary-yellow);
-  color: var(--color-secondary-darknavy);
-  border: 2px solid var(--color-primary-blue);
-  border-radius: 3px;
 }
 
-.modal-section {
-  margin-bottom: 1rem;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 0.5rem;
-}
-.modal-section:last-of-type {
-  border-bottom: none;
-}
-
-.close-btn {
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
+.close {
   float: left;
-  background-color: var(--color-primary-yellow);
-  color: var(--color-secondary-darknavy);
-  border: 2px solid var(--color-primary-blue);
-  border-radius: 3px;
 }
 
 /* Fade Transition */

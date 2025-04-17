@@ -11,3 +11,12 @@
   --color-secondary-magenta: #770747;
   --color-secondary-purple: #431170;
 }
+
+a, .color {
+  color: var(--color-primary-blue);
+}
+a:hover, .color {
+  color: var(--color-secondary-orange);
+  background-color: transparent;
+  cursor: pointer;
+}

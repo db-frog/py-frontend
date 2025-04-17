@@ -37,7 +37,7 @@ export default defineComponent({
 </template>
 
 
-<style>
+<style scoped>
 .auth {
   color: var(--color-primary-blue);
 }

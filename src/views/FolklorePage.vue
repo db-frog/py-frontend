@@ -81,10 +81,10 @@
         <SidebarFilter label="Filters" :collapsible="false">
           <button @click="handleFetchCollections"
           class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
-          >Apply Filters</button>
+          >Apply</button>
           <button @click="clearFilters"
           class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
-          >Clear Filters</button>
+          >Clear</button>
         </SidebarFilter>
 
         <!-- Dynamic Field Filters -->
@@ -347,9 +347,8 @@ export default defineComponent({
   display: flex;
   flex-direction: row;
   gap: 1rem;
-  font-family: Arial, sans-serif;
   background-color: var(--color-primary-white);
-  min-height: 100vh;
+  max-height: 100vh;
   padding: 1rem;
 }
 
@@ -361,7 +360,7 @@ export default defineComponent({
 
 .table-container {
   width: 1000px;
-  height: 600px;
+  height: 70vh;
   overflow-y: auto;
   overflow-x: auto;
   border: 2px solid var(--color-primary-blue);
@@ -374,6 +373,7 @@ export default defineComponent({
 .pagination-container {
   flex: 1;
   display: flex;
+  height: 10vh;
   flex-direction: row;
   gap: 8px;
   justify-content: center;
