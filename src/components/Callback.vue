@@ -7,7 +7,7 @@ import { onMounted } from 'vue';
 import { useOidc } from '@/composables/useOidc';
 
 // This is rendered only when window.location.pathname === '/callback'
-const { callback, loadUser, currentUser } = useOidc();
+const { loadUser } = useOidc();
 
 onMounted(async () => {
   await loadUser();
