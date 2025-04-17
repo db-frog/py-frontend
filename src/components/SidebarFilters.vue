@@ -1,5 +1,5 @@
 <template>
-  <div class="sidebar desktop-filters">
+  <div class="sidebar responsive-filters">
     <div class="filters-container">
       <slot name="filters"></slot>
     </div>
@@ -26,10 +26,13 @@ export default defineComponent({
   background-color: var(--color-primary-white);
 }
 
-.desktop-filters {
-  display: block;
-  width: 250px;
-  height: 80vh;
-  overflow-y: auto;
+@media (min-width: 768px) {
+  .responsive-filters {
+    display: block;
+    width: 250px;
+    height: 80vh;
+    overflow-y: auto;
+  }
 }
+
 </style>

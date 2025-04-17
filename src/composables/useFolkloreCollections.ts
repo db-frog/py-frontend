@@ -16,10 +16,8 @@ export interface FieldDefinition {
   path: string;       // Path in the FolkloreCollection object (dot notation)
   filterable?: boolean;
   hidden?: boolean;
+  showMobile?: boolean;
 }
-
-const showFilters = ref(false);
-const showModal   = ref(false);
 
 export function useFolkloreCollections() {
   // -----------------------------------
@@ -92,29 +90,34 @@ export function useFolkloreCollections() {
       key: "item",
       label: "Item of Folklore",
       path: "folklore.item",
+      showMobile: true,
     },
     {
       key: "genre",
       label: "Genre",
       path: "folklore.genre",
       filterable: true,
+      showMobile: false,
     },
     {
       key: "language_of_origin",
       label: "Language of Origin",
       path: "folklore.language_of_origin",
       filterable: true,
+      showMobile: false,
     },
     {
       key: "date_collected",
       label: "Date Collected",
       path: "date_collected",
+      showMobile: false,
     },
     {
       key: "location_collected",
       label: "Location Collected",
       path: "location_collected.city", // or a custom approach
       filterable: true,
+      showMobile: false,
     },
     {
       key: "place_mentioned",
@@ -122,6 +125,7 @@ export function useFolkloreCollections() {
       path: "folklore.place_mentioned.city",
       filterable: true,
       hidden: true,
+      showMobile: false,
     },
   ];
 

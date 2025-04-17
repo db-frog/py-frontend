@@ -3,7 +3,10 @@
     <thead>
       <tr>
         <!-- Render each field as a header -->
-        <th v-for="field of fields.filter(f => !f.hidden)" :key="field.key">
+        <th v-for="field of fields.filter(f => !f.hidden)"
+            :key="field.key"
+            :class="{ 'hide-mobile': field.showMobile === false }"
+        >
           {{ field.label }}
         </th>
       </tr>
@@ -18,6 +21,7 @@
         <td
           v-for="field of fields.filter(f => !f.hidden)"
           :key="field.key"
+          :class="{ 'hide-mobile': field.showMobile === false }"
         >
           {{ getNestedValue(row, field.path) }}
         </td>
@@ -82,11 +86,18 @@ export default defineComponent({
   padding: 0.5rem;
   overflow: hidden;
 }
+
 .dynamic-table tbody tr {
   cursor: pointer;
 }
 .dynamic-table tbody tr:hover {
   background-color: #f0f0f0;
+}
+
+@media (max-width: 767px) {
+  .hide-mobile {
+    display: none;
+  }
 }
 
 </style>

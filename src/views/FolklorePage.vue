@@ -1,123 +1,133 @@
 <template>
   <Header />
   <div class="page-container">
-    <SidebarFilters>
-      <template #filters>
-        <!-- View Section -->
-        <SidebarFilter label="View" :collapsible="false">
-          <select class="bg-gray-100" v-model="isTableView" @change="async () => { if (isTableView) await fetchInitialCollections() }">
-            <option :value="true" selected>Table</option>
-            <option :value="false">Map</option>
-          </select>
-        </SidebarFilter>
+    <button
+        @click="showFilters = !showFilters"
+        v-show="!isDesktop"
+        class="md:hidden p-2 m-2 bg-blue-600 text-white rounded"
+    >
+      {{ showFilters ? 'Hide Filters' : 'Show Filters' }}
+    </button>
 
-        <!-- Pagination or Map Timeline Section -->
-        <SidebarFilter v-if="isTableView" label="Pagination" :collapsible="false">
-          <label>
-            Items per page:
-            <input
-              type="number"
-              min="1"
-              max="20"
-              v-model="paginationState.itemsPerPage"
-              class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md"
-            />
-          </label>
-          <br />
-          <label>
-            Current page:
-            <input
-              type="number"
-              min="1"
-              :max="totalPages"
-              v-model="displayCurrentPage"
-              class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md"
-            />
-          </label>
-          <br />
-          <button @click="resetUserPagination" class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2">Reset</button>
-        </SidebarFilter>
-        <SidebarFilter v-else label="Timeline Configuration" :collapsible="false">
-          <label>
-            Start Year:
-            <input
-              type="number"
-              min="0"
-              v-model="timeState.startYear"
-              :max="timeState.endYear - timeState.timeWindow"
-              class="bg-gray-50 border-x-0 border-gray-300 text-center text-gray-900 text-sm"
-            />
-          </label>
-          <br />
-          <label>
-            End Year:
-            <input
-              type="number"
-              :min="timeState.startYear + timeState.timeWindow"
-              v-model="timeState.endYear"
-              :max="9999"
-              class="bg-gray-50 border-x-0 border-gray-300 text-center text-gray-900 text-sm"
-            />
-          </label>
-          <br />
-          <label>
-            Time Window (years):
-            <input
-              type="number"
-              min="1"
-              v-model="timeState.timeWindow"
-              :max="9999"
-              class="bg-gray-50 border-x-0 border-gray-300 text-center text-gray-900 text-sm"
-            />
-          </label>
-        </SidebarFilter>
+    <div class="sidebar-filters" v-show="showFilters || isDesktop">
+      <SidebarFilters>
+        <template #filters>
+          <!-- View Section -->
+          <SidebarFilter label="View" :collapsible="false">
+            <select class="bg-gray-100" v-model="isTableView" @change="async () => { if (isTableView) await fetchInitialCollections() }">
+              <option :value="true" selected>Table</option>
+              <option :value="false">Map</option>
+            </select>
+          </SidebarFilter>
 
-        <!-- Filters Section -->
-        <SidebarFilter :collapsible="true" label="Text Search" :default-expanded="false">
-          <span>Includes: </span>
-          <input type="text" v-model="selectedFilters['cleaned_full_text']" class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md">
-        </SidebarFilter>
+          <!-- Pagination or Map Timeline Section -->
+          <SidebarFilter v-if="isTableView" label="Pagination" :collapsible="false">
+            <label>
+              Items per page:
+              <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  v-model="paginationState.itemsPerPage"
+                  class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md"
+              />
+            </label>
+            <br />
+            <label>
+              Current page:
+              <input
+                  type="number"
+                  min="1"
+                  :max="totalPages"
+                  v-model="displayCurrentPage"
+                  class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md"
+              />
+            </label>
+            <br />
+            <button @click="resetUserPagination" class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2">Reset</button>
+          </SidebarFilter>
+          <SidebarFilter v-else label="Timeline Configuration" :collapsible="false">
+            <label>
+              Start Year:
+              <input
+                  type="number"
+                  min="0"
+                  v-model="timeState.startYear"
+                  :max="timeState.endYear - timeState.timeWindow"
+                  class="bg-gray-50 border-x-0 border-gray-300 text-center text-gray-900 text-sm"
+              />
+            </label>
+            <br />
+            <label>
+              End Year:
+              <input
+                  type="number"
+                  :min="timeState.startYear + timeState.timeWindow"
+                  v-model="timeState.endYear"
+                  :max="9999"
+                  class="bg-gray-50 border-x-0 border-gray-300 text-center text-gray-900 text-sm"
+              />
+            </label>
+            <br />
+            <label>
+              Time Window (years):
+              <input
+                  type="number"
+                  min="1"
+                  v-model="timeState.timeWindow"
+                  :max="9999"
+                  class="bg-gray-50 border-x-0 border-gray-300 text-center text-gray-900 text-sm"
+              />
+            </label>
+          </SidebarFilter>
 
-        <SidebarFilter label="Filters" :collapsible="false">
-          <button @click="handleFetchCollections"
-          class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
-          >Apply</button>
-          <button @click="clearFilters"
-          class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
-          >Clear</button>
-        </SidebarFilter>
+          <!-- Filters Section -->
+          <SidebarFilter :collapsible="true" label="Text Search" :default-expanded="false">
+            <span>Includes: </span>
+            <input type="text" v-model="selectedFilters['cleaned_full_text']" class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md">
+          </SidebarFilter>
 
-        <!-- Dynamic Field Filters -->
-        <SidebarFilter
-          v-for="field in filterableFields"
-          :key="field.key"
-          :label="field.label"
-          :collapsible="true"
-          :defaultExpanded="false"
-        >
-          <ul>
-            <li v-for="(option, index) in uniqueOptions[field.key]" :key="option + index">
-              <label>
-                <input type="checkbox" :value="option" v-model="selectedFilters[field.path]" />
-                {{ option }}
-              </label>
-            </li>
-          </ul>
-        </SidebarFilter>
+          <SidebarFilter label="Filters" :collapsible="false">
+            <button @click="handleFetchCollections"
+                    class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
+            >Apply</button>
+            <button @click="clearFilters"
+                    class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
+            >Clear</button>
+          </SidebarFilter>
 
-        <!-- Random Item Section -->
-        <SidebarFilter label="Random Item" :collapsible="false">
-          <button @click="handleFetchRandom"
-          class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit px-5 py-2.5 me-2 mb-2">
-            Generate
-          </button>
-          <button @click="undoRandom"
-          class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit px-5 py-2.5 me-2 mb-2">
-            Show all
-          </button>
-        </SidebarFilter>
-      </template>
-    </SidebarFilters>
+          <!-- Dynamic Field Filters -->
+          <SidebarFilter
+              v-for="field in filterableFields"
+              :key="field.key"
+              :label="field.label"
+              :collapsible="true"
+              :defaultExpanded="false"
+          >
+            <ul>
+              <li v-for="(option, index) in uniqueOptions[field.key]" :key="option + index">
+                <label>
+                  <input type="checkbox" :value="option" v-model="selectedFilters[field.path]" />
+                  {{ option }}
+                </label>
+              </li>
+            </ul>
+          </SidebarFilter>
+
+          <!-- Random Item Section -->
+          <SidebarFilter label="Random Item" :collapsible="false">
+            <button @click="handleFetchRandom"
+                    class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit px-5 py-2.5 me-2 mb-2">
+              Generate
+            </button>
+            <button @click="undoRandom"
+                    class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit px-5 py-2.5 me-2 mb-2">
+              Show all
+            </button>
+          </SidebarFilter>
+        </template>
+      </SidebarFilters>
+    </div>
 
     <!-- Main Content -->
     <div class="content-area">
@@ -125,21 +135,21 @@
       <div class="table-container">
         <!-- Table view -->
         <DynamicTable
-          v-if="isTableView"
-          :rows="paginatedCollections"
-          :fields="fields"
-          :onRowClick="openModal"
-          :isLoading="isLoading"
+            v-if="isTableView"
+            :rows="paginatedCollections"
+            :fields="fields"
+            :onRowClick="openModal"
+            :isLoading="isLoading"
         />
         <!-- Map view -->
         <DynamicMap
-          v-else
-          :getData="fetchFilteredMapData"
-          :timeState="timeState"
-          :reload="flipToReloadMap"
-          :fields="fields"
-          :onRowClick="openModal"
-          :isLoading="isLoading"
+            v-else
+            :getData="fetchFilteredMapData"
+            :timeState="timeState"
+            :reload="flipToReloadMap"
+            :fields="fields"
+            :onRowClick="openModal"
+            :isLoading="isLoading"
         />
       </div>
 
@@ -148,10 +158,10 @@
         <div v-for="(page, index) in displayPages" :key="index">
           <span v-if="page === '...'">...</span>
           <button
-            v-else
-            class="page-number"
-            :class="{ active: paginationState.currentPage + 1 === page }"
-            @click="goToPageIndex(page)"
+              v-else
+              class="page-number"
+              :class="{ active: paginationState.currentPage + 1 === page }"
+              @click="goToPageIndex(page)"
           >
             {{ page }}
           </button>
@@ -163,10 +173,10 @@
         <div v-for="(interval, index) in displayTime" :key="index">
           <span v-if="interval[0] === '...'">...</span>
           <span
-            v-else
-            class="page-number"
-            :class="{ active: timeState.currentYear === interval[0] }"
-            @click="goToTimeIndex(Number(interval[0]))"
+              v-else
+              class="page-number"
+              :class="{ active: timeState.currentYear === interval[0] }"
+              @click="goToTimeIndex(Number(interval[0]))"
           >
             {{ interval[0] }} - {{ interval[1] }}
           </span>
@@ -180,7 +190,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, ref, onMounted } from "vue";
+import {defineComponent, computed, ref, onMounted, onUnmounted} from "vue";
 import { useFolkloreCollections } from "@/composables/useFolkloreCollections";
 import DynamicMap from "@/components/DynamicMap.vue";
 import DynamicTable from "@/components/DynamicTable.vue";
@@ -231,7 +241,13 @@ export default defineComponent({
 
     const isLoading = ref(true);
     const showModal = ref(false);
+    const showFilters = ref(false);
+    const isDesktop  = ref(window.innerWidth >= 768);
     const selectedRow = ref(undefined);
+
+    function onResize() {
+      isDesktop.value = window.innerWidth >= 768;
+    }
 
     // Computed array for filterable fields
     const filterableFields = computed(() => fields.filter((f) => f.filterable));
@@ -240,16 +256,10 @@ export default defineComponent({
       selectedRow.value = row;
       showModal.value = true;
     }
+
     function closeModal() {
       showModal.value = false;
       selectedRow.value = undefined;
-    }
-
-    function resetUserTime() {
-      timeState.value.startYear = 1960;
-      timeState.value.endYear = new Date().getFullYear();
-      timeState.value.timeWindow = 10;
-      timeState.value.currentYear = 1960;
     }
 
     const goToPageIndex = useGoToPageIndex(isLoading, goToPage);
@@ -297,6 +307,7 @@ export default defineComponent({
 
     onMounted(async () => {
       isLoading.value = true;
+      window.addEventListener('resize', onResize);
       try {
         await fetchInitialCollections();
         await populateUniqueOptions();
@@ -305,6 +316,10 @@ export default defineComponent({
       } finally {
         isLoading.value = false;
       }
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener('resize', onResize);
     });
 
     return {
@@ -334,6 +349,8 @@ export default defineComponent({
       undoRandom: useUndoRandom(isLoading, isRandomCollection),
       clearFilters: useClearFilters(selectedFilters),
       showModal,
+      showFilters,
+      isDesktop,
       selectedRow,
       openModal,
       closeModal,
@@ -352,6 +369,13 @@ export default defineComponent({
   padding: 1rem;
 }
 
+@media (max-width: 768px) {
+  .page-container {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
 .content-area {
   flex: 1;
   display: flex;
@@ -368,6 +392,13 @@ export default defineComponent({
   margin-bottom: 1rem;
   background-color: var(--color-primary-white);
   color: var(--color-secondary-darknavy);
+}
+
+@media (max-width: 768px) {
+  .table-container {
+    width: 100%;
+    margin: 20px auto 20px auto;
+  }
 }
 
 .pagination-container {
