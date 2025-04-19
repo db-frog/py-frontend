@@ -17,6 +17,8 @@ export interface FieldDefinition {
   hidden?: boolean;
 }
 
+export enum ViewMode { Table, Index, Map }
+
 export function useFolkloreCollections() {
   // -----------------------------------
   // Reactive State
@@ -24,7 +26,10 @@ export function useFolkloreCollections() {
   const collections = ref<FolkloreCollection[]>([]);
   const randomCollections = ref<FolkloreCollection[]>([]);
   const isRandomCollection = ref<boolean>(false);
-  const isTableView = ref<boolean>(true);
+  const indexCollections = ref<FolkloreCollection[]>([]);
+  const currentViewMode = ref<ViewMode>(ViewMode.Table);
+  const currentFolderPath = ref<string[]>([""]);
+  const namesPerFolder = ref<string[][]>([[]]);
   const uniqueOptions = ref<Record<string, string[]>>({});
 
   // We'll store filters in an object: { fieldKey: string[] }
@@ -159,13 +164,31 @@ export function useFolkloreCollections() {
 }
 
   async function fetchRandom() {
-    const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
-    const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/random?filters=${filtersJson}`);
+    let dataResponse;
+    // Pass folder path for index view, filters for map / table view
+    if (currentViewMode.value == ViewMode.Index) {
+      // Remove empty strings from currentFolderPath
+      const firstEmptyIndex = currentFolderPath.value.indexOf("");
+      const cleaned_folder_path = currentFolderPath.value.slice(0, firstEmptyIndex === -1 ? currentFolderPath.value.length : firstEmptyIndex);
+      const folder_path_str = encodeURIComponent(JSON.stringify(cleaned_folder_path));
+      dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/random?folder_path_str=${folder_path_str}`);
+    } else {
+      const filtersJson = encodeURIComponent(JSON.stringify(selectedFilters.value));
+      dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/random?filters=${filtersJson}`);
+    }
+
     if (!dataResponse.ok) throw new Error("Failed to fetch data");
     const data = await dataResponse.json();
     randomCollections.value = data;
     paginationState.value.currentPage = 0; // reset to first page
     isRandomCollection.value = true;
+  }
+
+  async function fetchInitialFolders() {
+    const dataResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}/folklore/folderContents?return_elems=False`);
+    if (!dataResponse.ok) throw new Error("Failed to fetch data");
+    const data : string[] = await dataResponse.json();
+    namesPerFolder.value = [data];
   }
 
   // -----------------------------------
@@ -245,11 +268,17 @@ export function useFolkloreCollections() {
     fields,
     selectedFilters,
     lastUsedSelectedFilters,
-    paginationState,
-    timeState,
     uniqueOptions,
-    isTableView,
+    currentViewMode,
+    // Table View Data
+    paginationState,
+    // Map View Data
+    timeState,
     flipToReloadMap,
+    // Index View Data
+    namesPerFolder,
+    currentFolderPath,
+    indexCollections,
 
     // Computed
     paginatedCollections,
@@ -257,6 +286,7 @@ export function useFolkloreCollections() {
 
     // Methods
     fetchInitialCollections,
+    fetchInitialFolders,
     fetchRandom,
     fetchFilteredMapData,
     goToPage,

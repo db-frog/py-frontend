@@ -15,14 +15,15 @@
       <template #filters>
         <!-- View Section -->
         <SidebarFilter label="View" :collapsible="false">
-          <select class="bg-gray-100" v-model="isTableView" @change="async () => { if (isTableView) await fetchInitialCollections() }">
-            <option :value="true" selected>Table</option>
-            <option :value="false">Map</option>
+          <select class="bg-gray-100" v-model="currentViewMode" @change="async () => await handleViewChange()">
+            <option :value="ViewMode.Table" selected>Table</option>
+            <option :value="ViewMode.Map">Map</option>
+            <option :value="ViewMode.Index">Index</option>
           </select>
         </SidebarFilter>
 
         <!-- Pagination or Map Timeline Section -->
-        <SidebarFilter v-if="isTableView" label="Pagination" :collapsible="false">
+        <SidebarFilter v-if="currentViewMode == ViewMode.Table" label="Pagination" :collapsible="false">
           <label>
             Items per page:
             <input
@@ -47,7 +48,7 @@
           <br />
           <button @click="resetUserPagination" class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2">Reset</button>
         </SidebarFilter>
-        <SidebarFilter v-else label="Timeline Configuration" :collapsible="false">
+        <SidebarFilter v-if="currentViewMode == ViewMode.Map" label="Timeline Configuration" :collapsible="false">
           <label>
             Start Year:
             <input
@@ -81,40 +82,49 @@
             />
           </label>
         </SidebarFilter>
-
+        <SidebarFilter v-if="currentViewMode == ViewMode.Index" label="Folder" :collapsible="false">
+          <label v-for="(folderNames, index) in namesPerFolder" :key="index">
+            <select class="bg-gray-100 block mt-2" v-model="currentFolderPath[index]" @change="async () => await handleFolderChange(index)">
+              <option selected value="">Select</option>
+              <option v-for="folder_name in folderNames" :key="folder_name" :value="folder_name">
+                {{ folder_name }}
+              </option>
+            </select>
+          </label>
+        </SidebarFilter>
         <!-- Dynamic Field Filters -->
-        <SidebarFilter
-          v-for="field in filterableFields"
-          :key="field.key"
-          :label="field.label"
-          :collapsible="true"
-          :defaultExpanded="false"
-        >
-          <ul>
-            <li v-for="(option, index) in uniqueOptions[field.key]" :key="option + index">
-              <label>
-                <input type="checkbox" :value="option" v-model="selectedFilters[field.path]" />
-                {{ option }}
-              </label>
-            </li>
-          </ul>
-        </SidebarFilter>
-
-        <SidebarFilter :collapsible="true" label="Text Search" :default-expanded="false">
-          <span>Includes: </span>
-          <input type="text" v-model="selectedFilters['cleaned_full_text']" class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md">
-        </SidebarFilter>
-
-                <!-- Filters Section -->
+        <div v-if="currentViewMode != ViewMode.Index">
+          <SidebarFilter
+            v-for="field in filterableFields"
+            :key="field.key"
+            :label="field.label"
+            :collapsible="true"
+            :defaultExpanded="false"
+          >
+            <ul>
+              <li v-for="(option, index) in uniqueOptions[field.key]" :key="option + index">
+                <label>
+                  <input type="checkbox" :value="option" v-model="selectedFilters[field.path]" />
+                  {{ option }}
+                </label>
+              </li>
+            </ul>
+          </SidebarFilter>
+        <!-- Filters Section -->
+          <SidebarFilter :collapsible="true" label="Text Search" :default-expanded="false">
+            <span>Includes: </span>
+            <input type="text" v-model="selectedFilters['cleaned_full_text']" class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md">
+          </SidebarFilter>
+        </div>
+        
         <SidebarFilter label="Filters" :collapsible="false">
-          <button @click="handleFetchCollections"
+          <button @click="() => handleApplyFilters(handleFetchCollections, handleFetchIndex)"
           class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
           >Apply Filters</button>
-          <button @click="clearFilters"
+          <button @click="clearFilters" v-if="currentViewMode != ViewMode.Index"
           class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
           >Clear Filters</button>
         </SidebarFilter>
-
         <!-- Random Item Section -->
         <SidebarFilter label="Random Item" :collapsible="false">
           <button @click="handleFetchRandom"
@@ -135,7 +145,7 @@
       <div class="table-container">
         <!-- Table view -->
         <DynamicTable
-          v-if="isTableView"
+          v-if="currentViewMode == ViewMode.Table"
           :rows="paginatedCollections"
           :fields="fields"
           :onRowClick="openModal"
@@ -143,7 +153,7 @@
         />
         <!-- Map view -->
         <DynamicMap
-          v-else
+          v-if="currentViewMode == ViewMode.Map"
           :getData="fetchFilteredMapData"
           :timeState="timeState"
           :reload="flipToReloadMap"
@@ -151,10 +161,18 @@
           :onRowClick="openModal"
           :isLoading="isLoading"
         />
+        <!-- Index view -->
+        <DynamicTable
+          v-if="currentViewMode == ViewMode.Index"
+          :rows="indexDisplayCollection"
+          :fields="fields"
+          :onRowClick="openModal"
+          :isLoading="isLoading"
+        />
       </div>
 
       <!-- Pagination for Table View -->
-      <div class="pagination-container" v-if="totalPages > 1 && isTableView">
+      <div class="pagination-container" v-if="totalPages > 1 && currentViewMode == ViewMode.Table">
         <div v-for="(page, index) in displayPages" :key="index">
           <span v-if="page === '...'">...</span>
           <button
@@ -169,7 +187,7 @@
       </div>
 
       <!-- Timeline intervals for Map View -->
-      <div class="pagination-container" v-if="!isTableView">
+      <div class="pagination-container" v-if="currentViewMode == ViewMode.Map">
         <div v-for="(interval, index) in displayTime" :key="index">
           <span v-if="interval[0] === '...'">...</span>
           <span
@@ -191,7 +209,7 @@
 
 <script lang="ts">
 import { defineComponent, computed, ref, onMounted } from "vue";
-import { useFolkloreCollections } from "@/composables/useFolkloreCollections";
+import { useFolkloreCollections, ViewMode } from "@/composables/useFolkloreCollections";
 import DynamicMap from "@/components/DynamicMap.vue";
 import DynamicTable from "@/components/DynamicTable.vue";
 import FolkloreModal from "@/components/FolkloreModal.vue";
@@ -204,6 +222,9 @@ import {
   useUndoRandom,
   useResetUserPagination,
   useHandleFetchCollections,
+  useHandleFolderChange,
+  useHandleViewChange,
+  useHandleFetchIndex,
 } from "@/composables/useFolkloreUtils";
 import { usePagination } from "@/composables/usePagination";
 import AuthButton from "@/components/AuthButton.vue";
@@ -222,6 +243,8 @@ export default defineComponent({
     const {
       collections,
       isRandomCollection,
+      randomCollections,
+      indexCollections,
       fields,
       selectedFilters,
       flipToReloadMap,
@@ -233,10 +256,13 @@ export default defineComponent({
       paginatedCollections,
       fetchInitialCollections,
       fetchFilteredMapData,
-      isTableView,
+      fetchInitialFolders,
+      currentViewMode,
       fetchRandom,
       goToPage,
       populateUniqueOptions,
+      namesPerFolder,
+      currentFolderPath,
     } = useFolkloreCollections();
 
     const isLoading = ref(true);
@@ -261,6 +287,21 @@ export default defineComponent({
       timeState.value.timeWindow = 10;
       timeState.value.currentYear = 1960;
     }
+
+    async function handleApplyFilters(fetchCollections: () => Promise<void>, fetchIndexCollections: () => Promise<void>) {
+      if (currentViewMode.value == ViewMode.Index) {
+        await fetchIndexCollections();
+      } else {
+        await fetchCollections();
+      }
+    }
+  
+    const indexDisplayCollection = computed(() => {
+      if (isRandomCollection.value) {
+        return randomCollections.value;
+      }
+      return indexCollections.value;
+    });
 
     const goToPageIndex = useGoToPageIndex(isLoading, goToPage);
     const { displayCurrentPage, displayPages } = usePagination(paginationState, totalPages, goToPageIndex);
@@ -310,6 +351,7 @@ export default defineComponent({
       try {
         await fetchInitialCollections();
         await populateUniqueOptions();
+        await fetchInitialFolders();
       } catch (err) {
         console.error(err);
       } finally {
@@ -319,6 +361,8 @@ export default defineComponent({
 
     return {
       collections,
+      indexCollections,
+      indexDisplayCollection,
       isRandomCollection,
       fields,
       filterableFields,
@@ -329,17 +373,24 @@ export default defineComponent({
       totalPages,
       paginatedCollections,
       isLoading,
-      isTableView,
+      currentViewMode,
+      namesPerFolder,
+      currentFolderPath,
       displayCurrentPage,
       displayPages,
       displayTime,
       goToPageIndex,
       goToTimeIndex,
       fetchInitialCollections,
+      fetchInitialFolders,
       fetchFilteredMapData,
+      handleApplyFilters,
       flipToReloadMap,
-      handleFetchCollections: useHandleFetchCollections(selectedFilters, lastUsedSelectedFilters, isLoading, isTableView, flipToReloadMap, fetchInitialCollections),
+      handleFetchCollections: useHandleFetchCollections(selectedFilters, lastUsedSelectedFilters, isLoading, currentViewMode, flipToReloadMap, fetchInitialCollections),
       handleFetchRandom: useHandleFetchRandom(isLoading, fetchRandom),
+      handleFolderChange: useHandleFolderChange(namesPerFolder, currentFolderPath),
+      handleViewChange: useHandleViewChange(currentViewMode, fetchInitialFolders, fetchInitialCollections),
+      handleFetchIndex: useHandleFetchIndex(indexCollections, currentFolderPath),
       resetUserTime,
       resetUserPagination: useResetUserPagination(paginationState),
       undoRandom: useUndoRandom(isLoading, isRandomCollection),
@@ -348,6 +399,7 @@ export default defineComponent({
       selectedRow,
       openModal,
       closeModal,
+      ViewMode,
     };
   },
 });
