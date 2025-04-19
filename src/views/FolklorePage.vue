@@ -126,7 +126,7 @@
           >Clear Filters</button>
         </SidebarFilter>
         <!-- Random Item Section -->
-        <SidebarFilter label="Random Item" :collapsible="false">
+        <SidebarFilter label="Random Item" :collapsible="false" v-if="currentViewMode != ViewMode.Map">
           <button @click="handleFetchRandom"
           class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit px-5 py-2.5 me-2 mb-2">
             Generate
