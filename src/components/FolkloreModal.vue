@@ -105,7 +105,8 @@ export default defineComponent({
 }
 
 .modal-content h2 {
-  color: var(--color-primary-yellow);
+  color: var(--color-secondary-darknavy);
+  font-weight: bold;
 }
 
 .modal-btn {

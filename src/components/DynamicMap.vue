@@ -1,5 +1,5 @@
 <template>
-  <div class="map-container">
+  <div class="map-container" aria-label="Map of folklore items by location">
     <h4 id="item-count"></h4>
     <div id="map"></div>
     <div v-if="selectedCollections && showDynamicTable" class="table-container">

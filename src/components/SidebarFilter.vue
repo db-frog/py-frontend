@@ -1,10 +1,10 @@
 <template>
   <div class="filter-section">
     <div class="filter-header-container">
-      <h3 class="filter-header">{{ label }}</h3>
-      <span v-if="collapsible" class="expand-collapse-btn" @click="toggle">
+      <span class="filter-header">{{ label }}</span>
+      <button v-if="collapsible" class="expand-collapse-btn" @click="toggle">
         {{ expanded ? '[-]' : '[+]' }}
-      </span>
+      </button>
     </div>
     <div v-if="expanded" class="filter-content">
       <slot></slot>
@@ -58,14 +58,17 @@ export default defineComponent({
 }
 .filter-header {
   margin: 0;
-  color: var(--color-primary-yellow);
+  color: var(--color-secondary-darknavy);
   background-color: var(--color-primary-white);
+  font-weight: bold;
   position: sticky;
   top: 0;
   z-index: 1;
 }
 .expand-collapse-btn {
   cursor: pointer;
+  color: var(--color-secondary-darknavy);
+  font-weight: bold;
 }
 .filter-content {
   max-height: 250px;

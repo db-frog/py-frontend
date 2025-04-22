@@ -1,5 +1,6 @@
 <template>
   <table class="dynamic-table">
+    <caption class="hidden"> {{ caption }} </caption>
     <thead>
       <tr>
         <!-- Render each field as a header -->
@@ -59,6 +60,10 @@ export default defineComponent({
     isLoading: {
       type: Boolean,
       default: false,
+    },
+    caption: {
+      type: String,
+      default: ""
     },
   },
   methods: {

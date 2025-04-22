@@ -5,19 +5,24 @@
         @click="showFilters = !showFilters"
         v-show="!isDesktop"
         class="md:hidden p-2 m-2 bg-blue-600 text-white rounded"
+        aria-label="Show or Hide filters on mobile"
     >
       {{ showFilters ? 'Hide Filters' : 'Show Filters' }}
     </button>
 
     <div class="sidebar-filters" v-show="showFilters || isDesktop">
+      <h1 class="hidden"> Filters: </h1>
       <SidebarFilters>
         <template #filters>
           <!-- View Section -->
           <SidebarFilter label="View" :collapsible="false">
-            <select class="bg-gray-100" v-model="isTableView" @change="async () => { if (isTableView) await fetchInitialCollections() }">
-              <option :value="true" selected>Table</option>
-              <option :value="false">Map</option>
-            </select>
+            <label>
+              View:
+              <select class="bg-gray-100" aria-label="Select View" v-model="isTableView" @change="async () => { if (isTableView) await fetchInitialCollections() }">
+                <option :value="true" selected>Table</option>
+                <option :value="false">Map</option>
+              </select>
+            </label>
           </SidebarFilter>
 
           <!-- Pagination or Map Timeline Section -->
@@ -44,7 +49,7 @@
               />
             </label>
             <br />
-            <button @click="resetUserPagination" class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2">Reset</button>
+            <button @click="resetUserPagination" class="text-blue-700 hover:text-white border hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2">Reset</button>
           </SidebarFilter>
           <SidebarFilter v-else label="Timeline Configuration" :collapsible="false">
             <label>
@@ -83,16 +88,19 @@
 
           <!-- Filters Section -->
           <SidebarFilter :collapsible="true" label="Text Search" :default-expanded="false">
-            <span>Includes: </span>
-            <input type="text" v-model="selectedFilters['cleaned_full_text']" class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md">
+            <label>Includes:
+              <input type="text" aria-label="Text search" v-model="selectedFilters['cleaned_full_text']" class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md">
+            </label>
           </SidebarFilter>
 
           <SidebarFilter label="Filters" :collapsible="false">
             <button @click="handleFetchCollections"
-                    class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
+                    class="text-blue-700 hover:text-white border hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
+                    aria-label="Apply Selected Filters"
             >Apply</button>
             <button @click="clearFilters"
-                    class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
+                    class="text-blue-700 hover:text-white border hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
+                    aria-label="Clear Selected Filters"
             >Clear</button>
           </SidebarFilter>
 
@@ -107,7 +115,7 @@
             <ul>
               <li v-for="(option, index) in uniqueOptions[field.key]" :key="option + index">
                 <label>
-                  <input type="checkbox" :value="option" v-model="selectedFilters[field.path]" />
+                  <input type="checkbox" aria-label={{field.label}} :value="option" v-model="selectedFilters[field.path]" />
                   {{ option }}
                 </label>
               </li>
@@ -117,11 +125,13 @@
           <!-- Random Item Section -->
           <SidebarFilter label="Random Item" :collapsible="false">
             <button @click="handleFetchRandom"
-                    class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit px-5 py-2.5 me-2 mb-2">
+                    class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit px-5 py-2.5 me-2 mb-2"
+                    aria-label="Populate the table with a random folklore item">
               Generate
             </button>
             <button @click="undoRandom"
-                    class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit px-5 py-2.5 me-2 mb-2">
+                    class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit px-5 py-2.5 me-2 mb-2"
+                    aria-label="Show all folklore items">
               Show all
             </button>
           </SidebarFilter>
@@ -131,6 +141,7 @@
 
     <!-- Main Content -->
     <div class="content-area">
+      <h1 class="hidden"> Table: </h1>
       <!-- Data Container -->
       <div class="table-container">
         <!-- Table view -->
@@ -140,6 +151,7 @@
             :fields="fields"
             :onRowClick="openModal"
             :isLoading="isLoading"
+            :caption="folkloreCaption"
         />
         <!-- Map view -->
         <DynamicMap
@@ -169,7 +181,8 @@
       </div>
 
       <!-- Timeline intervals for Map View -->
-      <div class="pagination-container" v-if="!isTableView">
+      <div class="pagination-container" v-if="!isTableView" aria-labelledby="pagination">
+        <h2 id="pagination" class="hidden">Pagination</h2>
         <div v-for="(interval, index) in displayTime" :key="index">
           <span v-if="interval[0] === '...'">...</span>
           <span
@@ -244,6 +257,7 @@ export default defineComponent({
     const showFilters = ref(false);
     const isDesktop  = ref(window.innerWidth >= 768);
     const selectedRow = ref(undefined);
+    const folkloreCaption = "Items of Folklore Matching Selected Filters"
 
     function onResize() {
       isDesktop.value = window.innerWidth >= 768;
@@ -334,6 +348,7 @@ export default defineComponent({
       totalPages,
       paginatedCollections,
       isLoading,
+      folkloreCaption,
       isTableView,
       displayCurrentPage,
       displayPages,
@@ -435,7 +450,8 @@ export default defineComponent({
 
 button {
   background-color: var(--color-primary-blue);
-  color: var(--color-primary-white);
+  color: var(--color-primary-yellow);
+  border-color: var(--color-secondary-darknavy)
 }
 
 button:hover {

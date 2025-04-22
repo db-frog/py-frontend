@@ -31,8 +31,8 @@ export default defineComponent({
 
 <template>
   <div>
-    <a class="text-xl auth not-forced-colors hover:underline" v-if="!isAuthenticated"  @click="login">Login</a>
-    <a class="text-xl auth not-forced-colors hover:underline" v-if="isAuthenticated" @click="logout">Logout</a>
+    <a class="text-xl auth not-forced-colors hover:underline" v-if="!isAuthenticated" aria-label="Login to Calnet"  @click="login">Login</a>
+    <a class="text-xl auth not-forced-colors hover:underline" v-if="isAuthenticated" aria-label="Logout of Calnet" @click="logout">Logout</a>
   </div>
 </template>
 
