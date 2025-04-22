@@ -95,16 +95,20 @@
                 </option>
               </select>
             </label>
+            <button @click="() => handleApplyFilters(handleFetchCollections, handleFetchIndex)"
+                    class="text-blue-700 hover:text-white border hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 my-2 text-center mb-2 me-2"
+                    aria-label="Fetch Selected Folder"
+            >Fetch Folder</button>
           </SidebarFilter>
 
           <!-- Filters Section -->
-          <SidebarFilter :collapsible="true" label="Text Search" :default-expanded="false">
+          <SidebarFilter :collapsible="true" label="Text Search" :default-expanded="false" v-if="currentViewMode != ViewMode.Index">
             <label>Includes:
               <input type="text" aria-label="Text search" v-model="selectedFilters['cleaned_full_text']" class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md">
             </label>
           </SidebarFilter>
 
-          <SidebarFilter label="Filters" :collapsible="false">
+          <SidebarFilter label="Filters" :collapsible="false" v-if="currentViewMode != ViewMode.Index">
             <button @click="() => handleApplyFilters(handleFetchCollections, handleFetchIndex)"
                     class="text-blue-700 hover:text-white border hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
                     aria-label="Apply Selected Filters"
