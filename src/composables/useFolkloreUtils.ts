@@ -49,17 +49,6 @@ export function useResetUserPagination(
   };
 }
 
-export function useUndoRandom(
-  isLoading: Ref<boolean>,
-  isRandomCollection: Ref<boolean>
-) {
-  return function undoRandom() {
-    isLoading.value = true;
-    isRandomCollection.value = false;
-    isLoading.value = false;
-  };
-}
-
 export function useClearFilters(selectedFilters: Ref<any>) {
   return function clearFilters() {
     selectedFilters.value = {
@@ -133,6 +122,7 @@ export function useHandleFetchIndex(
   fetchIndexCollectionsForFolder: (folderPath: string[]) => Promise<FolkloreCollection[]>
 ) {
   return async function handleFetchIndexCollection() {
+
     const fp = currentFolderPath.value;
     const firstEmpty = fp.indexOf("");
     const cleaned = fp.slice(0, firstEmpty === -1 ? fp.length : firstEmpty);

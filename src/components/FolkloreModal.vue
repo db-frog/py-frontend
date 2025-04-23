@@ -2,20 +2,24 @@
   <transition name="fade">
     <div class="modal-backdrop" v-if="collection" @click="onClose">
       <div class="modal-content" @click.stop>
-        <h2>Folklore Details:</h2>
-        <p><strong>Contributor Name:</strong> {{ collection?.contributor.name }}</p>
-        <p><strong>Age:</strong> {{ collection?.contributor.age_bucket }}</p>
-        <p><strong>Gender:</strong> {{ collection?.contributor.gender || 'N/A' }}</p>
-        <p><strong>Item of Folklore:</strong> {{ collection?.folklore.item }}</p>
-        <p><strong>Genre:</strong> {{ collection?.folklore.genre }}</p>
-        <p><strong>Language of Origin:</strong> {{ collection?.folklore.language_of_origin || 'N/A' }}</p>
-        <p><strong>Places Mentioned:</strong>
+        <h2>Item of Folklore:</h2>
+        <p>{{ collection?.folklore.item }}</p>
+
+        <h2> Folklore Information: </h2>
+          <p><strong>Genre:</strong> {{ collection?.folklore.genre }}</p>
+          <p><strong>Language of Origin:</strong> {{ collection?.folklore.language_of_origin || 'N/A' }}</p>
+          <p><strong>Places Mentioned:</strong>
           <!-- Loop over all places and format each one -->
           <span v-for="(place, idx) in collection?.folklore.place_mentioned" :key="idx">
             {{ collection ? formatLocation(place) : '' }}
             <span v-if="idx < (collection?.folklore.place_mentioned.length || 1) - 1">, </span>
           </span>
         </p>
+
+        <h2>Contributor Information:</h2>
+        <p><strong>Name:</strong> {{ collection?.contributor.name }}</p>
+        <p><strong>Age:</strong> {{ collection?.contributor.age_bucket }}</p>
+        <p><strong>Gender:</strong> {{ collection?.contributor.gender || 'N/A' }}</p>
 
         <h2>Collection Information: </h2>
         <p><strong>Collector Name:</strong> {{ collection?.collector.name }}</p>

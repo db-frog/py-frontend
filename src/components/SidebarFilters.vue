@@ -22,7 +22,9 @@ export default defineComponent({
 .sidebar {
   border: 2px solid var(--color-primary-blue);
   border-radius: 6px;
-  padding: 1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 1rem;
   background-color: var(--color-primary-white);
 }
 

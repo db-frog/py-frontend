@@ -26,32 +26,16 @@
             </label>
           </SidebarFilter>
 
-          <!-- Pagination or Map Timeline Section -->
-          <SidebarFilter v-if="currentViewMode == ViewMode.Table" label="Pagination" :collapsible="false">
-            <label>
-              Items per page:
-              <input
-                  type="number"
-                  min="1"
-                  max="20"
-                  v-model="paginationState.itemsPerPage"
-                  class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md"
-              />
-            </label>
-            <br />
-            <label>
-              Current page:
-              <input
-                  type="number"
-                  min="1"
-                  :max="totalPages"
-                  v-model="displayCurrentPage"
-                  class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md"
-              />
-            </label>
-            <br />
-            <button @click="resetUserPagination" class="text-blue-700 hover:text-white border hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2">Reset</button>
+
+          <!-- Random Item Section -->
+          <SidebarFilter label="Random Item" :collapsible="false" v-if="currentViewMode != ViewMode.Map">
+            <button @click="handleFetchRandom"
+                    class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit px-5 py-2.5 me-2 mb-2"
+                    aria-label="Populate the table with a random folklore item">
+              Generate
+            </button>
           </SidebarFilter>
+
           <SidebarFilter v-if="currentViewMode == ViewMode.Map" label="Timeline Configuration" :collapsible="false">
             <label>
               Start Year:
@@ -95,24 +79,21 @@
                 </option>
               </select>
             </label>
+            <button @click="() => handleApplyFilters(handleFetchCollections, handleFetchIndex)"
+                    class="text-blue-700 hover:text-white border hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 my-2 text-center mb-2 me-2"
+                    aria-label="Fetch Selected Folder"
+            >Fetch Folder</button>
           </SidebarFilter>
 
           <!-- Filters Section -->
-          <SidebarFilter :collapsible="true" label="Text Search" :default-expanded="false">
-            <label>Includes:
-              <input type="text" aria-label="Text search" v-model="selectedFilters['cleaned_full_text']" class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md">
-            </label>
-          </SidebarFilter>
-
-          <SidebarFilter label="Filters" :collapsible="false">
-            <button @click="() => handleApplyFilters(handleFetchCollections, handleFetchIndex)"
-                    class="text-blue-700 hover:text-white border hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
-                    aria-label="Apply Selected Filters"
-            >Apply</button>
-            <button @click="clearFilters"
-                    class="text-blue-700 hover:text-white border hover:bg-blue-800 font-medium rounded-lg text-sm w-fit py-2.5 px-2.5 text-center mb-2 me-2"
-                    aria-label="Clear Selected Filters"
-            >Clear</button>
+          <SidebarFilter :collapsible="true" label="Text Search" :default-expanded="true" v-if="currentViewMode != ViewMode.Index">
+            <div>
+              <input type="text"
+                     aria-label="Text search"
+                     v-model="selectedFilters['cleaned_full_text']"
+                     v-on:keyup.enter="handleApplyFilters(handleFetchCollections, handleFetchIndex)"
+                     class="bg-gray-100 border-x-0 border-gray-300 w-full text-center text-gray-900 text-md">
+            </div>
           </SidebarFilter>
 
           <!-- Dynamic Field Filters -->
@@ -133,18 +114,15 @@
             </ul>
           </SidebarFilter>
 
-          <!-- Random Item Section -->
-          <SidebarFilter label="Random Item" :collapsible="false" v-if="currentViewMode != ViewMode.Map">
-            <button @click="handleFetchRandom"
-                    class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit px-5 py-2.5 me-2 mb-2"
-                    aria-label="Populate the table with a random folklore item">
-              Generate
-            </button>
-            <button @click="undoRandom"
-                    class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm w-fit px-5 py-2.5 me-2 mb-2"
-                    aria-label="Show all folklore items">
-              Show all
-            </button>
+          <SidebarFilter class="sticky bottom-0 bg-white z-10" :collapsible="false" v-if="currentViewMode != ViewMode.Index" label="">
+            <button @click="() => handleApplyFilters(handleFetchCollections, handleFetchIndex)"
+                    class="text-blue-700 hover:text-white border hover:bg-blue-800 font-medium rounded-lg text-sm w-full py-2.5 px-2.5 my-2 text-center mb-2 me-2"
+                    aria-label="Apply Selected Filters"
+            >Apply Filters</button>
+            <button @click="() => clearFilters()"
+                    class="text-blue-700 hover:text-white border hover:bg-blue-800 font-medium rounded-lg text-sm w-full py-2.5 px-2.5 text-center mb-2 me-2"
+                    aria-label="Clear Filters"
+            >Clear Filters</button>
           </SidebarFilter>
       </template>
     </SidebarFilters>
@@ -186,8 +164,20 @@
       </div>
 
       <!-- Pagination for Table View -->
-      <div class="pagination-container" v-if="totalPages > 1 && currentViewMode == ViewMode.Table">
-        <div v-for="(page, index) in displayPages" :key="index">
+      <div class="pagination-container" v-if="currentViewMode == ViewMode.Table">
+        <div>
+          <label>
+            Items per page:
+            <input
+                type="number"
+                min="1"
+                max="20"
+                v-model="paginationState.itemsPerPage"
+                class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md"
+            />
+          </label>
+        </div>
+        <div v-if="totalPages > 1" v-for="(page, index) in displayPages" :key="index">
           <span v-if="page === '...'">...</span>
           <button
               v-else
@@ -308,6 +298,7 @@ export default defineComponent({
     }
 
     async function handleApplyFilters(fetchCollections: () => Promise<void>, fetchIndexCollections: () => Promise<void>) {
+      isRandomCollection.value = false;
       if (currentViewMode.value == ViewMode.Index) {
         await fetchIndexCollections();
       } else {
@@ -418,7 +409,6 @@ export default defineComponent({
       handleViewChange: useHandleViewChange(currentViewMode, fetchInitialFolders, fetchInitialCollections),
       handleFetchIndex: useHandleFetchIndex(indexCollections, currentFolderPath, fetchIndexCollectionsForFolder),
       resetUserPagination: useResetUserPagination(paginationState),
-      undoRandom: useUndoRandom(isLoading, isRandomCollection),
       clearFilters: useClearFilters(selectedFilters),
       showModal,
       showFilters,
