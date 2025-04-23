@@ -60,8 +60,6 @@ export function useFolkloreCollections() {
   const namesPerFolder = ref<string[][]>([[]]);
   const uniqueOptions = ref<Record<string, string[]>>({});
 
-  // We'll store filters in an object: { fieldKey: string[] }
-  // E.g.: { genre: ['Legend', 'Myth'], language_of_origin: ['Spanish'] }
   const selectedFilters = ref<Record<string, string[] | string>>({
           "folklore.genre": [],
           "folklore.language_of_origin": [],
@@ -70,6 +68,10 @@ export function useFolkloreCollections() {
           // add other filterable fields here as needed
           "cleaned_full_text": "",
         });
+  const appliedFilters = ref<Record<string, any>>(
+    JSON.parse(JSON.stringify(selectedFilters.value))
+  );
+
   // To prevent repeat API calls with same filters as last call's
   const lastUsedSelectedFilters = ref<Record<string, string[] | string>>();
   // This is a workaround for the map to re-render when filters change. Value doesn't matter.
@@ -224,6 +226,7 @@ export function useFolkloreCollections() {
   }
 
   async function fetchInitialFolders() {
+    appliedFilters.value = JSON.parse(JSON.stringify(selectedFilters.value));
     const dataResponse = await fetchWithAuth(`${import.meta.env.VITE_BACKEND_API}/folklore/folderContents?return_elems=False`);
     if (!dataResponse.ok) throw new Error("Failed to fetch data");
     const data : string[] = await dataResponse.json();
@@ -307,6 +310,7 @@ export function useFolkloreCollections() {
     isRandomCollection,
     fields,
     selectedFilters,
+    appliedFilters,
     lastUsedSelectedFilters,
     uniqueOptions,
     currentViewMode,

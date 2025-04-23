@@ -131,6 +131,24 @@
     <!-- Main Content -->
     <div class="content-area">
       <h1 class="hidden"> Table: </h1>
+      <h2 class="hidden"> Current Filters on Table: </h2>
+      <div
+        v-if="(activeChips.length) && (currentViewMode != ViewMode.Index)"
+        class="chip-bar mb-4 overflow-x-auto whitespace-nowrap px-2"
+      >
+        <span
+          v-for="chip in activeChips"
+          :key="chip.id"
+          class="inline-flex items-center bg-gray-200 rounded-full px-3 py-1 mx-0.5 text-sm"
+        >
+          <span class="mr-2">{{ chip.label }}: {{ chip.value }}</span>
+          <span
+            @click="removeChip(chip)"
+            class="text-gray-600 hover:text-gray-800 hover:cursor-pointer font-bold focus:outline-none"
+            aria-label="Remove this filter"
+          >×</span>
+        </span>
+      </div>
       <!-- Data Container -->
       <div class="table-container">
         <!-- Table view -->
@@ -195,14 +213,14 @@
         <h2 id="pagination" class="hidden">Pagination</h2>
         <div v-for="(interval, index) in displayTime" :key="index">
           <span v-if="interval[0] === '...'">...</span>
-          <span
+          <button
               v-else
               class="page-number"
               :class="{ active: timeState.currentYear === interval[0] }"
               @click="goToTimeIndex(Number(interval[0]))"
           >
             {{ interval[0] }} - {{ interval[1] }}
-          </span>
+          </button>
         </div>
       </div>
 
@@ -224,8 +242,6 @@ import {
   useHandleFetchRandom,
   useGoToPageIndex,
   useClearFilters,
-  useUndoRandom,
-  useResetUserPagination,
   useHandleFetchCollections,
   useHandleFolderChange,
   useHandleViewChange,
@@ -252,6 +268,7 @@ export default defineComponent({
       indexCollections,
       fields,
       selectedFilters,
+      appliedFilters,
       flipToReloadMap,
       lastUsedSelectedFilters,
       paginationState,
@@ -280,12 +297,76 @@ export default defineComponent({
     const folkloreCaptionFilters = "Items of Folklore Matching Selected Filters"
     const folkloreCaptionIndex = "Items of Folklore Matching Selected Index Categories"
 
+    const handleFetchCollections = useHandleFetchCollections(
+      selectedFilters,
+      lastUsedSelectedFilters,
+      isLoading,
+      currentViewMode,
+      flipToReloadMap,
+      fetchInitialCollections
+    )
+    const handleFetchIndex = useHandleFetchIndex(
+      indexCollections,
+      currentFolderPath,
+      fetchIndexCollectionsForFolder
+    )
+
     function onResize() {
       isDesktop.value = window.innerWidth >= 768;
     }
 
     // Computed array for filterable fields
     const filterableFields = computed(() => fields.filter((f) => f.filterable));
+
+    const activeChips = computed(() => {
+      const filters = appliedFilters.value as Record<string, any>;
+      const chips: Array<{ id: string; label: string; value: string; path: string }> = [];
+
+      // text‐search chip
+      const txt = (filters.cleaned_full_text as string) || "";
+      if (txt.trim()) {
+        chips.push({
+          id: "cleaned_full_text",
+          label: "Text",
+          value: txt,
+          path: "cleaned_full_text",
+        });
+      }
+
+      // one chip per checked box
+      filterableFields.value.forEach((f) => {
+        const arr = (filters[f.path] as string[]) || [];
+        arr.forEach((v) => {
+          chips.push({
+            id: `${f.key}-${v}`,
+            label: f.label,
+            value: v,
+            path: f.path,
+          });
+        });
+      });
+
+      return chips;
+    });
+  function removeChip(chip: { path: string; value: string }) {
+      const filters = appliedFilters.value;
+
+      if (chip.path === "cleaned_full_text") {
+        filters.cleaned_full_text = "";
+      } else {
+        filters[chip.path] = (filters[chip.path] as string[]).filter(
+          (x) => x !== chip.value
+        );
+      }
+
+      selectedFilters.value = JSON.parse(JSON.stringify(appliedFilters.value));
+
+      if (currentViewMode.value === ViewMode.Index) {
+        handleFetchIndex();
+      } else {
+        handleFetchCollections();
+      }
+    }
 
     function openModal(row: any) {
       selectedRow.value = row;
@@ -299,6 +380,7 @@ export default defineComponent({
 
     async function handleApplyFilters(fetchCollections: () => Promise<void>, fetchIndexCollections: () => Promise<void>) {
       isRandomCollection.value = false;
+      appliedFilters.value = JSON.parse(JSON.stringify(selectedFilters.value));
       if (currentViewMode.value == ViewMode.Index) {
         await fetchIndexCollections();
       } else {
@@ -381,6 +463,8 @@ export default defineComponent({
       isRandomCollection,
       fields,
       filterableFields,
+      activeChips,
+      removeChip,
       selectedFilters,
       paginationState,
       timeState,
@@ -403,12 +487,11 @@ export default defineComponent({
       fetchFilteredMapData,
       handleApplyFilters,
       flipToReloadMap,
-      handleFetchCollections: useHandleFetchCollections(selectedFilters, lastUsedSelectedFilters, isLoading, currentViewMode, flipToReloadMap, fetchInitialCollections),
+      handleFetchCollections,
       handleFetchRandom: useHandleFetchRandom(isLoading, fetchRandom),
       handleFolderChange: useHandleFolderChange(namesPerFolder, currentFolderPath, fetchFolderContents),
       handleViewChange: useHandleViewChange(currentViewMode, fetchInitialFolders, fetchInitialCollections),
-      handleFetchIndex: useHandleFetchIndex(indexCollections, currentFolderPath, fetchIndexCollectionsForFolder),
-      resetUserPagination: useResetUserPagination(paginationState),
+      handleFetchIndex,
       clearFilters: useClearFilters(selectedFilters),
       showModal,
       showFilters,
@@ -441,12 +524,12 @@ export default defineComponent({
 
 .content-area {
   flex: 1;
+  width: 1000px;
   display: flex;
   flex-direction: column;
 }
 
 .table-container {
-  width: 1000px;
   height: 70vh;
   overflow-y: auto;
   overflow-x: auto;
@@ -458,6 +541,10 @@ export default defineComponent({
 }
 
 @media (max-width: 768px) {
+  .content-area {
+    width: 100%;
+  }
+
   .table-container {
     width: 100%;
     margin: 20px auto 20px auto;
@@ -480,13 +567,6 @@ export default defineComponent({
   text-align: center; /* Center the text inside */
   border: 1px solid var(--color-primary-blue);
   border-radius: 4px;
-  background-color: var(--color-primary-blue);
-  color: var(--color-primary-white);
-}
-
-.page-number:hover {
-  background-color: var(--color-secondary-orange);
-  border-color: var(--color-secondary-orange);
 }
 
 .page-number.active {
@@ -494,6 +574,14 @@ export default defineComponent({
   background-color: var(--color-primary-yellow);
   color: var(--color-secondary-darknavy);
   border-color: var(--color-primary-blue);
+}
+
+.chip-bar::-webkit-scrollbar {
+  height: 6px;
+}
+.chip-bar::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.2);
+  border-radius: 3px;
 }
 
 button {

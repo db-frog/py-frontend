@@ -2,45 +2,78 @@
   <transition name="fade">
     <div class="modal-backdrop" v-if="collection" @click="onClose">
       <div class="modal-content" @click.stop>
-        <h2>Item of Folklore:</h2>
-        <p>{{ collection?.folklore.item }}</p>
+        <!-- Modal Header -->
+        <header class="modal-header flex justify-between items-center border-b pb-2 mb-4">
+          <h2 class="text-2xl font-bold">Folklore Item Details</h2>
+          <button @click="onClose" aria-label="Close" class="text-gray-500 hover:cursor-pointer hover:text-gray-800 text-xl">
+            &times;
+          </button>
+        </header>
 
-        <h2> Folklore Information: </h2>
-          <p><strong>Genre:</strong> {{ collection?.folklore.genre }}</p>
-          <p><strong>Language of Origin:</strong> {{ collection?.folklore.language_of_origin || 'N/A' }}</p>
-          <p><strong>Places Mentioned:</strong>
-          <!-- Loop over all places and format each one -->
-          <span v-for="(place, idx) in collection?.folklore.place_mentioned" :key="idx">
-            {{ collection ? formatLocation(place) : '' }}
-            <span v-if="idx < (collection?.folklore.place_mentioned.length || 1) - 1">, </span>
-          </span>
-        </p>
+        <!-- Modal Body as Collapsible Tree -->
+        <section class="modal-body overflow-y-auto">
+          <!-- Item of Folklore -->
+          <details open class="mb-4">
+            <summary class="font-semibold cursor-pointer">Item of Folklore</summary>
+            <p class="pl-4 mt-2 leading-relaxed">{{ collection?.folklore.item }}</p>
+          </details>
 
-        <h2>Contributor Information:</h2>
-        <p><strong>Name:</strong> {{ collection?.contributor.name }}</p>
-        <p><strong>Age:</strong> {{ collection?.contributor.age_bucket }}</p>
-        <p><strong>Gender:</strong> {{ collection?.contributor.gender || 'N/A' }}</p>
+          <!-- Folklore Information -->
+          <details open class="mb-4">
+            <summary class="font-semibold cursor-pointer">Folklore Information</summary>
+            <ul class="pl-4 mt-2 space-y-1">
+              <li><strong>Genre:</strong> {{ collection?.folklore.genre }}</li>
+              <li><strong>Language of Origin:</strong> {{ collection?.folklore.language_of_origin || 'N/A' }}</li>
+              <li>
+                <strong>Places Mentioned:</strong>
+                <ul class="pl-4 list-disc space-y-0.5">
+                  <li
+                    v-for="(place, idx) in collection?.folklore.place_mentioned"
+                    :key="idx"
+                    class="leading-relaxed"
+                  >
+                    {{ collection ? formatLocation(place) : '' }}
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </details>
 
-        <h2>Collection Information: </h2>
-        <p><strong>Collector Name:</strong> {{ collection?.collector.name }}</p>
-        <p>
-          <strong>Date Collected:</strong>
-          {{ collection ? formatDate(collection.date_collected) : '' }}
-        </p>
-        <p>
-          <strong>Location Collected:</strong>
-          {{ collection ? formatLocation(collection.location_collected) : '' }}
-        </p>
-        <p><strong>Collector Comments:</strong> {{ collection?.analysis.collector_comments || 'N/A' }}</p>
-        <p><strong>Collection Context:</strong> {{ collection?.analysis.context.collection_context || 'N/A' }}</p>
+          <!-- Contributor Information -->
+          <details open class="mb-4">
+            <summary class="font-semibold cursor-pointer">Contributor Information</summary>
+            <ul class="pl-4 mt-2 space-y-1">
+              <li><strong>Name:</strong> {{ collection?.contributor.name }}</li>
+              <li><strong>Age:</strong> {{ collection?.contributor.age_bucket }}</li>
+              <li><strong>Gender:</strong> {{ collection?.contributor.gender || 'N/A' }}</li>
+            </ul>
+          </details>
 
-        <a class="modal-btn close" @click="onClose">Close</a>
-        <a class="modal-btn download"
-           target="_blank" rel="noopener noreferrer"
-           :href="`${api}/folklore/${collection._id}/download`"
-           @click.stop>
-          Download
-        </a>
+          <!-- Collection Information -->
+          <details open class="mb-4">
+            <summary class="font-semibold cursor-pointer">Collection Information</summary>
+            <ul class="pl-4 mt-2 space-y-1">
+              <li><strong>Collector Name:</strong> {{ collection?.collector.name }}</li>
+              <li><strong>Date Collected:</strong> {{ collection ? formatDate(collection.date_collected) : '' }}</li>
+              <li><strong>Location Collected:</strong> {{ collection ? formatLocation(collection.location_collected) : '' }}</li>
+              <li><strong>Collector Comments:</strong> {{ collection?.analysis.collector_comments || 'N/A' }}</li>
+              <li><strong>Collection Context:</strong> {{ collection?.analysis.context.collection_context || 'N/A' }}</li>
+            </ul>
+          </details>
+        </section>
+
+        <!-- Modal Footer -->
+        <footer class="modal-footer flex justify-end space-x-2 border-t pt-4 mt-4">
+          <button @click="onClose" class="btn-secondary">Close</button>
+          <a
+            class="btn-primary"
+            target="_blank"
+            rel="noopener noreferrer"
+            :href="`${api}/folklore/${collection._id}/download`"
+          >
+            Download
+          </a>
+        </footer>
       </div>
     </div>
   </transition>
@@ -49,9 +82,9 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import type { PropType } from "vue";
-import type { FolkloreCollection, Location } from "@/types"; // adjust path
+import type { FolkloreCollection, Location } from "@/types";
 
-const api = import.meta.env.VITE_BACKEND_API
+const api = import.meta.env.VITE_BACKEND_API;
 
 export default defineComponent({
   name: "FolkloreModal",
@@ -71,14 +104,14 @@ export default defineComponent({
       return new Date(dateStr).toLocaleDateString();
     },
     formatLocation(location: Location) {
-      return [location.city, location.state, location.country].filter(Boolean).join(", ");
+      return [location.city, location.state, location.country]
+        .filter(Boolean)
+        .join(", ");
     },
   },
   setup() {
-    return {
-      api
-    };
-  }
+    return { api };
+  },
 });
 </script>
 
@@ -89,7 +122,7 @@ export default defineComponent({
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0,0,0,0.5);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -108,26 +141,34 @@ export default defineComponent({
   color: #000;
 }
 
-.modal-content h2 {
-  color: var(--color-secondary-darknavy);
-  font-weight: bold;
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
 }
 
-.modal-btn {
-  margin-top: 1rem;
+.btn-primary,
+.btn-secondary {
   padding: 0.5rem 1rem;
+  font-weight: 500;
+  border-radius: 3px;
+  border: 2px solid var(--color-primary-blue);
   cursor: pointer;
+}
+
+.btn-primary {
   background-color: var(--color-primary-yellow);
   color: var(--color-secondary-darknavy);
-  border: 2px solid var(--color-primary-blue);
-  border-radius: 3px;
 }
 
-.download {
-  float: right;
+.btn-secondary {
+  background-color: transparent;
+  color: var(--color-secondary-darknavy);
 }
 
-.close {
-  float: left;
+.btn-secondary:hover {
+  background-color: var(--color-primary-yellow);
 }
+
 </style>

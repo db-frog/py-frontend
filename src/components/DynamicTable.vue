@@ -1,7 +1,7 @@
 <template>
   <table class="dynamic-table">
     <caption class="hidden"> {{ caption }} </caption>
-    <thead>
+    <thead class="bg-gray-200">
       <tr>
         <!-- Render each field as a header -->
         <th v-for="field of fields.filter(f => !f.hidden)"
@@ -17,6 +17,7 @@
         v-for="(row, rowIndex) in rows"
         :key="rowIndex"
         @click="onRowClick(row)"
+        class="odd:bg-white even:bg-gray-50 hover:bg-gray-50"
       >
         <!-- Render each field cell -->
         <td
@@ -80,7 +81,6 @@ export default defineComponent({
   border-collapse: collapse;
 }
 .dynamic-table thead {
-  background-color: #f0f0f0;
   position: sticky;
   top: 0;
   z-index: 1;
@@ -88,7 +88,7 @@ export default defineComponent({
 .dynamic-table th,
 .dynamic-table td {
   border: 1px solid #ccc;
-  padding: 0.5rem;
+  padding: 0.75rem;
   overflow: hidden;
 }
 
