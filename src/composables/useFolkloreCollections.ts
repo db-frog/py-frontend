@@ -41,6 +41,7 @@ export function useFolkloreCollections() {
           "folklore.place_mentioned.city": [],
           // add other filterable fields here as needed
           "cleaned_full_text": "",
+          "cleaned_full_text_embedding": "",
         });
   // To prevent repeat API calls with same filters as last call's
   const lastUsedSelectedFilters = ref<Record<string, string[] | string>>();

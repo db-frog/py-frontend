@@ -111,9 +111,13 @@
             </ul>
           </SidebarFilter>
         <!-- Filters Section -->
-          <SidebarFilter :collapsible="true" label="Text Search" :default-expanded="false">
+          <SidebarFilter :collapsible="true" label="Exact Text Search" :default-expanded="false">
             <span>Includes: </span>
-            <input type="text" v-model="selectedFilters['cleaned_full_text']" class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md">
+            <input type="text" v-model="selectedFilters['cleaned_full_text']" @change="() => selectedFilters['cleaned_full_text_embedding'] = ''" class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md">
+          </SidebarFilter>
+          <SidebarFilter :collapsible="true" label="Similarity Text Search" :default-expanded="false">
+            <span>Includes: </span>
+            <input type="text" v-model="selectedFilters['cleaned_full_text_embedding']" @change="() => selectedFilters['cleaned_full_text'] = ''" class="bg-gray-100 border-x-0 border-gray-300 text-center text-gray-900 text-md">
           </SidebarFilter>
         </div>
         

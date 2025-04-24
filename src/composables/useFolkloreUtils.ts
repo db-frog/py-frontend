@@ -68,6 +68,7 @@ export function useClearFilters(selectedFilters: Ref<any>) {
       "location_collected.city": [],
       "folklore.place_mentioned.city": [],
       "cleaned_full_text": "",
+      "cleaned_full_text_embedding": "",
     };
   };
 }
